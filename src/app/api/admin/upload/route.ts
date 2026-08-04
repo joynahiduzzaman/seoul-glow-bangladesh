@@ -41,11 +41,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Image must be under 5MB" }, { status: 400 });
   }
 
-  await mkdir(UPLOAD_DIR, { recursive: true });
+  // On Vercel and similar serverless hosts the bundle directory is read-only, so
+  // the writes below fail with an opaque EROFS that surfaces in the admin UI as a
+  // generic 500. Detect it up front and say what is actually wrong and what to do,
+  // rather than letting an admin conclude the image was too large or malformed.
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    console.error("[admin/upload] Filesystem uploads are unavailable on serverless hosting.");
+    return NextResponse.json(
+      {
+        error:
+          "Image upload is not available on this deployment. The server's filesystem is " +
+          "read-only, so uploads need object storage (Vercel Blob, S3 or Cloudinary) to be " +
+          "configured. Paste an image URL instead for now.",
+      },
+      { status: 501 }
+    );
+  }
 
   const filename = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}${extensionFor(file.type)}`;
   const bytes = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(UPLOAD_DIR, filename), bytes);
+  try {
+    await mkdir(UPLOAD_DIR, { recursive: true });
+    await writeFile(path.join(UPLOAD_DIR, filename), bytes);
+  } catch (err) {
+    console.error("[admin/upload] write failed:", err);
+    return NextResponse.json({ error: "Could not save the image on the server." }, { status: 500 });
+  }
 
   return NextResponse.json({ url: `${PUBLIC_PATH_PREFIX}/${filename}` }, { status: 201 });
 }
