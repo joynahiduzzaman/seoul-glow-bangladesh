@@ -151,7 +151,7 @@ function LoginForm() {
         {process.env.NODE_ENV === "development" && (
           <div className="mt-8 rounded-xl border border-border-soft bg-beige/60 p-4 text-xs text-ink/70">
             <strong className="text-ink/70">Demo accounts (dev only, from seed data):</strong>
-            <br />Admin: admin@seoulglow.com.bd
+            <br />Admin: seoulglow26@gmail.com
             <br />Customer: customer@example.com
             <br />
             <span className="text-ink/50">

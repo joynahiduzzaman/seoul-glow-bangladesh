@@ -65,7 +65,7 @@ Or run all of steps 1–4 in one go: `npm run setup`.
 
 | Role     | Email                  |
 |----------|------------------------|
-| Admin    | admin@seoulglow.com.bd |
+| Admin    | seoulglow26@gmail.com |
 | Customer | customer@example.com   |
 
 **Passwords are generated randomly on every seed run and printed once** — watch the output of
@@ -85,15 +85,27 @@ If you're locked out, use the script — it writes directly to whatever `DATABAS
 and prints the target host first so you can see whether you're about to change production:
 
 ```bash
-npm run admin:password admin@seoulglow.com.bd              # generates and prints a password
-npm run admin:password admin@seoulglow.com.bd 'YourNewPass' # or set one explicitly
+npm run admin:password seoulglow26@gmail.com              # generates and prints a password
+npm run admin:password seoulglow26@gmail.com 'YourNewPass' # or set one explicitly
 ```
 
-This matters because **`/forgot-password` cannot rescue the admin account today**. It emails a
-reset link, and while the project uses Resend's shared `onboarding@resend.dev` sender, delivery
-only works to the address that owns the Resend account. A link addressed to
-`admin@seoulglow.com.bd` is rejected by the provider and never arrives. Verifying a domain in
-Resend (see §4) removes this limitation.
+`/forgot-password` also works for this account, because the admin address is the same one that
+owns the Resend account — and while the project uses Resend's shared `onboarding@resend.dev`
+sender, that is the *only* address it will deliver to. Change the admin email to anything else and
+password reset silently stops arriving until a domain is verified in Resend (see §4). The script
+above is the reliable path regardless.
+
+### Changing an account's email
+
+The profile form deliberately doesn't expose this: changing the address you sign in with is an
+account-recovery action, not a profile edit, and allowing it from a live session is a known
+account-takeover path. Use:
+
+```bash
+npm run user:email old@example.com new@example.com
+```
+
+It refuses an address already in use and marks the new one verified.
 
 (The seed script also creates three more customer accounts — `reviewer1@example.com` through `reviewer3@example.com`, same password as above — purely as authors for the demo product reviews shown on the homepage and product pages.)
 

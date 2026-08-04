@@ -18,7 +18,8 @@
     "admin:password": "tsx scripts/set-admin-password.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "setup": "npm install && npx prisma generate && npx prisma db push && npm run db:seed"
+    "setup": "npm install && npx prisma generate && npx prisma db push && npm run db:seed",
+    "user:email": "tsx scripts/set-user-email.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
