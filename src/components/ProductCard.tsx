@@ -9,6 +9,7 @@ import { BadgeStamp, BadgePill } from "./Badge";
 import CompareButton from "./CompareButton";
 import WishlistButton from "./WishlistButton";
 import ProductImage from "./ProductImage";
+import QuickViewModal from "./QuickViewModal";
 import { useState } from "react";
 
 export interface ProductCardData {
@@ -43,6 +44,7 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
   const openCart = useCartStore((s) => s.openCart);
   const { dict } = useLocale();
   const [adding, setAdding] = useState(false);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
   const finalPrice = discountedPrice(product.price, product.discountPercent);
   const outOfStock = product.stock === 0;
   const lowStock = !outOfStock && product.stock <= 5;
@@ -114,10 +116,27 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
                 layout change. */}
             <div className="absolute inset-x-3 bottom-3 flex items-center gap-2">
               {!outOfStock && (
-                <span className="hidden h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full bg-white/90 px-3 text-[11px] font-semibold uppercase tracking-wide text-ink opacity-0 shadow-e2 backdrop-blur transition-opacity duration-300 ease-silk group-hover:opacity-100 md:flex">
+                // Sits inside the <Link> that wraps the card, so it has to cancel
+                // the navigation itself — otherwise opening the sheet and routing
+                // to the product page race each other.
+                //
+                // Visibility differs by input, not by screen size: touch devices
+                // have no hover, so gating on it there left the control
+                // permanently unreachable. Always visible below `md`, revealed on
+                // hover above it where the affordance is the point.
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setQuickViewOpen(true);
+                  }}
+                  aria-label={`Quick view: ${product.name}`}
+                  className="flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full bg-white/90 px-3 text-[11px] font-semibold uppercase tracking-wide text-ink opacity-100 shadow-e2 backdrop-blur transition-opacity duration-300 ease-silk md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                >
                   <Eye size={13} className="shrink-0" />
                   <span className="truncate">Quick View</span>
-                </span>
+                </button>
               )}
 
               {/* ml-auto matters for the states where no pill is rendered — out
@@ -223,6 +242,12 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
         {adding && <Loader2 size={13} className="animate-spin" />}
         {outOfStock ? dict.product.outOfStock.split(".")[0] : dict.product.addToCart}
       </button>
+
+      {/* Mounted only while open — a grid of 20 cards should not carry 20 idle
+          dialogs, each with its own escape-key and scroll-lock effects. */}
+      {quickViewOpen && (
+        <QuickViewModal product={product} open onClose={() => setQuickViewOpen(false)} />
+      )}
     </article>
   );
 }

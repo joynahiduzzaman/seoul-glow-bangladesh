@@ -242,6 +242,25 @@ body {
   animation: marquee 22s linear infinite;
 }
 
+/* Quick View entrance. Both are wrapped in prefers-reduced-motion below so a
+   dialog that appears instantly is still fully usable. */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[fadeIn"],
+  [class*="animate-[slideUp"] {
+    animation: none !important;
+  }
+}
+
 @keyframes float {
   0%, 100% { transform: translateY(0) translateX(0); }
   50% { transform: translateY(-16px) translateX(4px); }
