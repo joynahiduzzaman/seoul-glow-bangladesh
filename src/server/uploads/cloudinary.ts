@@ -33,10 +33,14 @@ export function isCloudinaryConfigured(): boolean {
 let configured = false;
 function configure() {
   if (configured) return;
+  // Trim every credential. Pasting into a dashboard field routinely captures a
+  // trailing newline or space, and for the secret that is not a harmless typo:
+  // it is mixed into the request signature, so the only symptom is Cloudinary
+  // rejecting an otherwise correct upload with "Invalid Signature".
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME?.trim(),
+    api_key: process.env.CLOUDINARY_API_KEY?.trim(),
+    api_secret: process.env.CLOUDINARY_API_SECRET?.trim(),
     secure: true, // never hand back an http:// URL to embed in the storefront
   });
   configured = true;

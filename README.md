@@ -205,6 +205,24 @@ and genuine exceptions are handled.
 With no `RESEND_API_KEY`, emails are logged to the console instead of sent, so a fresh clone works
 with no mail account at all.
 
+### Checking it actually works
+
+Every user-facing endpoint that sends email returns success regardless of what the provider did —
+`/api/auth/forgot-password` must not reveal whether an address has an account. Correct, but it also
+means a silently broken mail setup looks identical to a working one. So there's an admin-only
+diagnostic:
+
+```bash
+# What is configured (no key is ever returned)
+GET  /api/admin/email-status
+
+# Send a real message and report what Resend said
+POST /api/admin/email-status   { "to": "you@example.com" }
+```
+
+Both require an `ADMIN` or `MANAGER` session. The POST response includes Resend's message id on
+success, or the provider's error message on failure.
+
 ### Templates
 
 `templates.ts` builds each message; `shell.ts` provides the shared branded wrapper. They're

@@ -28,3 +28,8 @@ public/uploads/*
 !public/uploads/products
 public/uploads/products/*
 !public/uploads/products/.gitkeep
+
+# Ad-hoc verification scripts kept out of the repo.
+.verify-*.mjs
+.prod-*.mjs
+.audit-*.mjs

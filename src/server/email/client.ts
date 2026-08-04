@@ -38,6 +38,9 @@ let client: Resend | null = null;
 /** Returns the shared client, or null when no API key is configured. */
 export function getResend(): Resend | null {
   if (!isEmailConfigured()) return null;
-  if (!client) client = new Resend(process.env.RESEND_API_KEY);
+  // Trimmed for the same reason as the Cloudinary credentials: pasting into a
+  // dashboard field commonly captures a trailing newline, which would otherwise
+  // be sent in the Authorization header and rejected as an invalid key.
+  if (!client) client = new Resend(process.env.RESEND_API_KEY!.trim());
   return client;
 }
