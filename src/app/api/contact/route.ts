@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await sendContactFormEmail(parsed.data);
-  // Even if SMTP isn't configured yet, the message is logged server-side and the
+  // Even if email isn't configured yet, the message is logged server-side and the
   // visitor still gets a normal success response — a missing mail server shouldn't
   // surface as a broken contact form to a potential customer.
   return NextResponse.json({ success: true, delivered: result.sent });

@@ -118,7 +118,7 @@ This is a genuinely large spec — building an enterprise multi-vendor platform 
 
 **Built with real integration code, but needs your credentials to go live:**
 - Payment gateways (bKash, Nagad, Rocket, Visa/Mastercard/Amex, ShurjoPay) — see §13. Genuine HTTP calls to each provider's API; without credentials, checkout gracefully falls back to a "pending payment" order instead of crashing.
-- Transactional email (welcome, verification, password reset, order confirmation, newsletter, abandoned cart) — see §4. Without SMTP credentials, emails are logged to the console instead of sent, so nothing crashes.
+- Transactional email (welcome, verification, password reset, order confirmation, newsletter, abandoned cart) — see §4. Without a Resend API key, emails are logged to the console instead of sent, so nothing crashes.
 - Messenger live chat — needs your Facebook Page ID (see §5).
 
 **Deliberately out of scope** (flagged here rather than silently omitted):
@@ -141,28 +141,78 @@ The language switcher lives in the header (desktop: top-right; mobile: bottom of
 - The admin dashboard intentionally stays English-only (standard practice for back-office tools)
 - The `Product.koreanName` / `banglaName` fields already exist in the schema for bilingual product names — wire them into the product page template if you want per-product translations too
 
-## 4. Live email (verification, password reset, order confirmation, newsletter)
+## 4. Transactional email (Resend)
 
-Real SMTP sending via `src/lib/email/` — works with **any** SMTP provider (Gmail, SendGrid, Mailgun, Amazon SES, Zoho, or your own mail server). If `SMTP_HOST` isn't set, emails are logged to the console instead of sent, so nothing ever crashes for lack of credentials.
+Email is sent through **[Resend](https://resend.com)** via its official SDK, in `src/server/email/`.
 
-To activate:
+SMTP was the original implementation and was replaced because it suits serverless badly: every
+cold invocation pays a TCP + TLS + AUTH handshake before it can send, connections can't be
+pooled across invocations, and several hosts block outbound port 587 outright. Resend is a plain
+HTTPS API — one request, no connection state.
+
+### Setup
+
+1. Create a free account at **[resend.com/signup](https://resend.com/signup)** (3,000 emails/month,
+   no card required).
+2. Go to **API Keys → Create API Key**, give it *Sending access*, and copy the value — it is shown
+   **once**. Keys look like `re_xxxxxxxx_...`.
+3. Add it to `.env` locally (gitignored) and to **Vercel → Settings → Environment Variables** for
+   Production and Preview:
+
+```bash
+RESEND_API_KEY="re_your_key_here"
+EMAIL_FROM=""   # optional, see below
 ```
-SMTP_HOST="smtp.yourprovider.com"
-SMTP_PORT="587"
-SMTP_USER="your-username"
-SMTP_PASSWORD="your-password"
-SMTP_FROM="\"Seoul Glow Bangladesh\" <no-reply@seoulglow.com.bd>"
+
+Vercel snapshots environment variables into a deployment when it is created, so **redeploy after
+adding the key** — it will not apply to existing deployments.
+
+### Sender address — read this before going live
+
+The default sender is Resend's shared `onboarding@resend.dev`, which needs no DNS setup. It has one
+significant limitation: **it can only deliver to the email address that owns the Resend account.**
+Mail to anyone else is rejected. That's fine for testing, but it means customers will not receive
+order confirmations.
+
+To email real customers, verify a domain in **Resend → Domains** (add the SPF and DKIM records it
+gives you at your DNS provider), then set:
+
+```bash
+EMAIL_FROM="Seoul Glow Bangladesh <orders@yourdomain.com>"
 ```
 
-Emails currently sent automatically:
-- **Welcome email** — on registration
-- **Verification email** — on registration, with a 24-hour stateless link to `/api/auth/verify-email`
-- **Password reset** — from `/forgot-password`, 1-hour stateless link to `/reset-password`
-- **Order confirmation** — on every completed order, with a real invoice-style summary
-- **Newsletter welcome** — on signup from the homepage footer form
-- **Abandoned cart recovery** — see §7
+### What gets sent
 
-Templates live in `src/lib/email/templates.ts` and share a branded HTML shell (`shell.ts`) with your logo.
+| Email | Trigger |
+|---|---|
+| Welcome | On registration |
+| Verification | On registration — 24-hour stateless link to `/api/auth/verify-email` |
+| Password reset | From `/forgot-password` — 1-hour stateless link to `/reset-password` |
+| Order confirmation | On every completed order, with an itemised summary and totals |
+| Order status update | When an admin changes order status, including courier and tracking number |
+| Newsletter welcome | On signup from the footer form |
+| Abandoned cart | See §7 |
+| Contact form | To the support inbox, with `replyTo` set to the sender |
+
+### Failure handling
+
+`send()` in `src/server/email/index.ts` is the only place that talks to the provider, and it
+**never throws**. Every call site is fire-and-forget — a customer who completed checkout must not
+see an error because the mail API had a bad minute. Failures return `{ sent: false }` and log. The
+Resend SDK reports API-level problems in an `error` field rather than by rejecting, so both that
+and genuine exceptions are handled.
+
+With no `RESEND_API_KEY`, emails are logged to the console instead of sent, so a fresh clone works
+with no mail account at all.
+
+### Templates
+
+`templates.ts` builds each message; `shell.ts` provides the shared branded wrapper. They're
+nested-table HTML with inline styles, because email clients are not browsers — Outlook renders
+through Word and none of them reliably support flexbox or grid. A media query provides responsive
+behaviour as progressive enhancement, and the layout is fluid to 600px rather than fixed-width.
+Every interpolated value is HTML-escaped: customer names and product titles are user- and
+admin-supplied.
 
 ## 5. Live chat (WhatsApp + Messenger)
 
@@ -349,7 +399,7 @@ src/
     db.ts             Prisma client singleton
     auth.ts           JWT + password hashing + stateless action-token helpers
     rate-limit.ts      In-memory rate limiter for auth/checkout endpoints
-    email/            SMTP transporter, HTML templates, and send functions
+    email/            Resend client, HTML templates, and send functions
     payments/         Modular payment gateway integrations (one file per provider)
       __tests__/      Vitest tests for payment provider config detection
 

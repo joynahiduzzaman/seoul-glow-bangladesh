@@ -1,43 +1,55 @@
-import { emailShell, button } from "./shell";
+import { emailShell, button, heading, note, divider, escapeHtml } from "./shell";
 import { formatBDT } from "@/lib/utils";
 import { SITE_URL } from "@/lib/site-url";
 
 const siteUrl = SITE_URL;
+const brand = "#C68A8A";
+const muted = "#6B6055";
 
-/** Escapes user-supplied text before it goes into an HTML email. Used for the contact
- * form template, which is the one place in this file that embeds raw free-typed visitor
- * input (name/subject/message) rather than data we generated ourselves. */
-function escapeHtml(input: string) {
-  return input.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
-}
+/**
+ * Every value interpolated below is escaped. Customer names come from the
+ * registration form and product titles from the admin panel, so both are
+ * attacker- or typo-influenced: an unescaped apostrophe corrupts the markup and
+ * an unescaped tag can inject into whatever renders the message. Previously only
+ * the contact-form template escaped its inputs.
+ */
+
+const p = (text: string, extra = "") =>
+  `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:${muted};${extra}">${text}</p>`;
 
 export function welcomeEmail(name: string) {
   return emailShell(
     "Welcome to Seoul Glow Bangladesh",
-    `<h2 style="font-family:Georgia,serif;font-size:22px;margin:0 0 12px;">Welcome, ${name}! 🌸</h2>
-     <p style="font-size:14px;line-height:1.6;color:#555;">Thanks for joining Seoul Glow Bangladesh — your home for 100% authentic Korean skincare, imported directly from South Korea.</p>
-     <p style="font-size:14px;line-height:1.6;color:#555;">Browse our curated collection from COSRX, Beauty of Joseon, Anua, and more.</p>
-     ${button("Start Shopping", `${siteUrl}/shop`)}`
+    `${heading(`Welcome, ${name}`)}
+     ${p("Thanks for joining Seoul Glow Bangladesh — your home for 100% authentic Korean skincare, imported directly from South Korea.")}
+     ${p("Every product is sourced from the brand or an authorised distributor, so what arrives at your door is exactly what you'd find on a shelf in Seoul.")}
+     ${button("Start Shopping", `${siteUrl}/shop`)}
+     ${divider()}
+     ${p(`<strong style="color:#2F2A28;">Cash on Delivery</strong> across Bangladesh &middot; Dhaka ৳70, outside Dhaka ৳130 &middot; delivered in 1&ndash;5 business days.`, "font-size:13.5px;margin:0;")}`,
+    "Your Korean skincare journey starts here — authentic, direct from Seoul."
   );
 }
 
 export function verificationEmail(name: string, verifyUrl: string) {
   return emailShell(
     "Verify your email",
-    `<h2 style="font-family:Georgia,serif;font-size:22px;margin:0 0 12px;">Verify your email</h2>
-     <p style="font-size:14px;line-height:1.6;color:#555;">Hi ${name}, please confirm this is your email address to activate your Seoul Glow Bangladesh account.</p>
+    `${heading("Verify your email")}
+     ${p(`Hi ${escapeHtml(name)}, please confirm this is your email address to activate your Seoul Glow Bangladesh account.`)}
      ${button("Verify Email", verifyUrl)}
-     <p style="font-size:12px;color:#999;margin-top:16px;">This link expires in 24 hours. If you didn't create this account, you can ignore this email.</p>`
+     ${note("This link expires in 24 hours. If you didn't create this account, you can ignore this email.")}`,
+    "Confirm your email address to activate your account."
   );
 }
 
 export function passwordResetEmail(name: string, resetUrl: string) {
   return emailShell(
     "Reset your password",
-    `<h2 style="font-family:Georgia,serif;font-size:22px;margin:0 0 12px;">Reset your password</h2>
-     <p style="font-size:14px;line-height:1.6;color:#555;">Hi ${name}, we received a request to reset your password.</p>
+    `${heading("Reset your password")}
+     ${p(`Hi ${escapeHtml(name)}, we received a request to reset the password on your Seoul Glow Bangladesh account.`)}
      ${button("Reset Password", resetUrl)}
-     <p style="font-size:12px;color:#999;margin-top:16px;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email — your password will not change.</p>`
+     ${p(`<span style="font-size:12.5px;color:#8A8079;">Button not working? Paste this into your browser:</span><br /><a href="${resetUrl}" style="font-size:12px;color:${brand};word-break:break-all;">${escapeHtml(resetUrl)}</a>`, "margin-top:18px;")}
+     ${note("This link expires in 1 hour. If you didn't request this, you can safely ignore this email — your password will not change.")}`,
+    "Reset your Seoul Glow Bangladesh password. Link expires in 1 hour."
   );
 }
 
@@ -55,27 +67,44 @@ export function orderConfirmationEmail(params: {
     .map(
       (i) =>
         `<tr>
-          <td style="padding:8px 0;font-size:13px;color:#333;">${i.name} × ${i.quantity}</td>
-          <td style="padding:8px 0;font-size:13px;color:#333;text-align:right;">${formatBDT(i.price * i.quantity)}</td>
+          <td style="padding:11px 0;font-size:14px;color:#2F2A28;border-bottom:1px solid #F1EAE3;">
+            ${escapeHtml(i.name)}
+            <span style="color:#8A8079;">&times; ${i.quantity}</span>
+          </td>
+          <td style="padding:11px 0;font-size:14px;color:#2F2A28;text-align:right;white-space:nowrap;border-bottom:1px solid #F1EAE3;">
+            ${formatBDT(i.price * i.quantity)}
+          </td>
         </tr>`
     )
     .join("");
 
+  const totalRow = (label: string, value: string, strong = false, color = muted) =>
+    `<tr>
+      <td style="padding:5px 0;font-size:${strong ? "15px" : "13.5px"};color:${strong ? "#2F2A28" : color};${strong ? "font-weight:700;padding-top:10px;" : ""}">${label}</td>
+      <td style="padding:5px 0;font-size:${strong ? "15px" : "13.5px"};color:${strong ? "#2F2A28" : color};text-align:right;white-space:nowrap;${strong ? "font-weight:700;padding-top:10px;" : ""}">${value}</td>
+    </tr>`;
+
   return emailShell(
     `Order Confirmed — ${params.orderNumber}`,
-    `<h2 style="font-family:Georgia,serif;font-size:22px;margin:0 0 4px;">Thank you, ${params.customerName}!</h2>
-     <p style="font-size:14px;color:#555;margin:0 0 20px;">Your order <strong>${params.orderNumber}</strong> has been confirmed.</p>
-     <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;border-bottom:1px solid #eee;">
+    `${heading(`Thank you, ${params.customerName}`)}
+     ${p(`Your order <strong style="color:#2F2A28;">${escapeHtml(params.orderNumber)}</strong> is confirmed and being prepared.`)}
+
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 0;border-top:1px solid #EDE4DA;">
        ${rows}
      </table>
-     <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;font-size:13px;color:#555;">
-       <tr><td>Subtotal</td><td style="text-align:right;">${formatBDT(params.subtotal)}</td></tr>
-       ${params.discount > 0 ? `<tr><td>Discount</td><td style="text-align:right;color:${"#C68A8A"};">-${formatBDT(params.discount)}</td></tr>` : ""}
-       <tr><td>Shipping</td><td style="text-align:right;">${formatBDT(params.shippingFee)}</td></tr>
-       <tr><td style="font-weight:700;padding-top:6px;">Total</td><td style="text-align:right;font-weight:700;padding-top:6px;">${formatBDT(params.total)}</td></tr>
+
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
+       ${totalRow("Subtotal", formatBDT(params.subtotal))}
+       ${params.discount > 0 ? totalRow("Discount", `-${formatBDT(params.discount)}`, false, brand) : ""}
+       ${totalRow("Shipping", formatBDT(params.shippingFee))}
+       ${totalRow("Total", formatBDT(params.total), true)}
      </table>
-     <p style="font-size:12px;color:#999;margin-top:16px;">Payment method: ${params.paymentMethod}</p>
-     ${button("View Order", `${siteUrl}/checkout/success?order=${params.orderNumber}`)}`
+
+     ${divider()}
+     ${p(`Payment method: <strong style="color:#2F2A28;">${escapeHtml(params.paymentMethod)}</strong>`, "font-size:13.5px;margin:0;")}
+     ${button("View Your Order", `${siteUrl}/checkout/success?order=${encodeURIComponent(params.orderNumber)}`)}
+     ${note("Questions about this order? Just reply to this email and our team will help.")}`,
+    `Order ${params.orderNumber} confirmed — ${formatBDT(params.total)}`
   );
 }
 
@@ -88,54 +117,68 @@ export function orderStatusEmail(params: {
 }) {
   const trackingLine =
     params.courier || params.trackingNumber
-      ? `<p style="font-size:13px;color:#555;margin:12px 0 0;">${params.courier ? `Courier: ${params.courier}` : ""}${
-          params.courier && params.trackingNumber ? " · " : ""
-        }${params.trackingNumber ? `Tracking #: ${params.trackingNumber}` : ""}</p>`
+      ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 0;background:#FAF7F2;border-radius:10px;">
+           <tr><td style="padding:14px 16px;font-size:13.5px;color:${muted};">
+             ${params.courier ? `Courier: <strong style="color:#2F2A28;">${escapeHtml(params.courier)}</strong>` : ""}
+             ${params.courier && params.trackingNumber ? " &middot; " : ""}
+             ${params.trackingNumber ? `Tracking #: <strong style="color:#2F2A28;">${escapeHtml(params.trackingNumber)}</strong>` : ""}
+           </td></tr>
+         </table>`
       : "";
 
   return emailShell(
     `Order ${params.orderNumber} update`,
-    `<h2 style="font-family:Georgia,serif;font-size:22px;margin:0 0 4px;">Hi ${params.customerName},</h2>
-     <p style="font-size:14px;line-height:1.6;color:#555;margin:0;">Your order <strong>${params.orderNumber}</strong> ${params.message}.</p>
+    `${heading(`Hi ${params.customerName}`)}
+     ${p(`Your order <strong style="color:#2F2A28;">${escapeHtml(params.orderNumber)}</strong> ${escapeHtml(params.message)}.`)}
      ${trackingLine}
-     ${button("Track Your Order", `${siteUrl}/track-order?order=${params.orderNumber}`)}`
+     ${button("Track Your Order", `${siteUrl}/track-order?order=${encodeURIComponent(params.orderNumber)}`)}`,
+    `Order ${params.orderNumber} ${params.message}`
   );
 }
 
 export function newsletterWelcomeEmail() {
   return emailShell(
     "You're on the Glow List",
-    `<h2 style="font-family:Georgia,serif;font-size:22px;margin:0 0 12px;">You're on the Glow List ✨</h2>
-     <p style="font-size:14px;line-height:1.6;color:#555;">You'll now get early access to flash sales, new arrivals, and skincare tips from Seoul Glow Bangladesh.</p>
-     ${button("Shop Now", `${siteUrl}/shop`)}`
+    `${heading("You're on the Glow List")}
+     ${p("You'll now get early access to flash sales, new arrivals, and skincare tips from Seoul Glow Bangladesh.")}
+     ${button("Shop Now", `${siteUrl}/shop`)}`,
+    "Early access to flash sales, new arrivals and skincare tips."
   );
 }
 
 export function abandonedCartEmail(name: string, items: { name: string; image?: string }[], resumeUrl: string) {
   const rows = items
     .slice(0, 4)
-    .map((i) => `<tr><td style="padding:6px 0;font-size:13px;color:#333;">${i.name}</td></tr>`)
+    .map(
+      (i) =>
+        `<tr><td style="padding:9px 0;font-size:14px;color:#2F2A28;border-bottom:1px solid #F1EAE3;">${escapeHtml(i.name)}</td></tr>`
+    )
     .join("");
+
   return emailShell(
-    "You left something glowing behind ✨",
-    `<h2 style="font-family:Georgia,serif;font-size:22px;margin:0 0 12px;">Still thinking it over, ${name || "there"}?</h2>
-     <p style="font-size:14px;line-height:1.6;color:#555;">You left these in your cart:</p>
-     <table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;">${rows}</table>
-     ${button("Complete Your Order", resumeUrl)}`
+    "You left something glowing behind",
+    `${heading(`Still thinking it over, ${name || "there"}?`)}
+     ${p("You left these in your cart:")}
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:14px 0 0;border-top:1px solid #EDE4DA;">${rows}</table>
+     ${button("Complete Your Order", resumeUrl)}`,
+    "Your cart is waiting — finish your order in a couple of taps."
   );
 }
 
-/** Internal notification sent to the support inbox when someone submits the public
- * contact form — not branded for the customer, just a clean readable summary for staff. */
+/**
+ * Internal notification to the support inbox when someone submits the public
+ * contact form — a clean readable summary for staff, not customer-facing branding.
+ */
 export function contactFormEmail(params: { name: string; email: string; subject: string; message: string }) {
   return emailShell(
     "New Contact Form Submission",
-    `<h2 style="font-family:Georgia,serif;font-size:20px;margin:0 0 12px;">New message from the Contact page</h2>
-     <table width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#333;margin-bottom:16px;">
-       <tr><td style="padding:4px 0;color:#999;width:80px;">From</td><td>${escapeHtml(params.name)} &lt;${escapeHtml(params.email)}&gt;</td></tr>
-       <tr><td style="padding:4px 0;color:#999;">Subject</td><td>${escapeHtml(params.subject)}</td></tr>
+    `${heading("New message from the Contact page")}
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:13.5px;color:#2F2A28;margin-bottom:18px;">
+       <tr><td style="padding:5px 0;color:#8A8079;width:78px;">From</td><td>${escapeHtml(params.name)} &lt;${escapeHtml(params.email)}&gt;</td></tr>
+       <tr><td style="padding:5px 0;color:#8A8079;">Subject</td><td>${escapeHtml(params.subject)}</td></tr>
      </table>
-     <p style="font-size:14px;line-height:1.6;color:#333;white-space:pre-wrap;border-left:3px solid #C68A8A;padding-left:12px;">${escapeHtml(params.message)}</p>
-     <p style="font-size:12px;color:#999;margin-top:16px;">Reply directly to this email to respond — it'll go straight to ${escapeHtml(params.email)}.</p>`
+     <div style="font-size:14.5px;line-height:1.7;color:#2F2A28;white-space:pre-wrap;border-left:3px solid ${brand};padding-left:14px;">${escapeHtml(params.message)}</div>
+     ${note(`Reply directly to this email to respond — it will go straight to ${params.email}.`)}`,
+    `${params.subject} — from ${params.name}`
   );
 }

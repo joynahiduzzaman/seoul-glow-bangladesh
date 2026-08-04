@@ -1,26 +1,52 @@
-import { getTransporter, isEmailConfigured } from "./transporter";
+import { getResend, emailFrom, isEmailConfigured } from "./client";
 import * as templates from "./templates";
 
-const FROM = process.env.SMTP_FROM || '"Seoul Glow Bangladesh" <seoulglow26@gmail.com>';
+export interface SendResult {
+  sent: boolean;
+  id?: string;
+  error?: unknown;
+}
 
 /**
- * Core send function. If SMTP isn't configured, logs the email to the console instead of
- * throwing — so registration/checkout/etc. never fail just because mail isn't set up yet.
+ * Core send function, and the only place that talks to the mail provider.
+ *
+ * Email is never load-bearing for the request that triggers it: a customer who
+ * completed checkout must not see an error because the mail API had a bad
+ * minute. Every failure path here returns { sent: false } and logs — it never
+ * throws — so callers can fire-and-forget. When no API key is present the
+ * message is logged instead, keeping local development working without an
+ * account.
  */
-async function send(to: string, subject: string, html: string, replyTo?: string) {
-  const transporter = getTransporter();
-  if (!transporter || !isEmailConfigured()) {
-    console.log(`[email:not-configured] Would send "${subject}" to ${to}. Add SMTP_* vars in .env to send for real.`);
+async function send(to: string, subject: string, html: string, replyTo?: string): Promise<SendResult> {
+  const resend = getResend();
+  if (!resend || !isEmailConfigured()) {
+    console.log(`[email:not-configured] Would send "${subject}" to ${to}. Set RESEND_API_KEY to send for real.`);
     return { sent: false };
   }
+
   try {
-    await transporter.sendMail({ from: FROM, to, subject, html, replyTo });
-    return { sent: true };
+    // The SDK reports API-level problems in `error` rather than by throwing, so
+    // both that and a genuine exception have to be handled.
+    const { data, error } = await resend.emails.send({
+      from: emailFrom(),
+      to,
+      subject,
+      html,
+      ...(replyTo ? { replyTo } : {}),
+    });
+
+    if (error) {
+      console.error(`[email] Resend rejected "${subject}" to ${to}:`, error.name, error.message);
+      return { sent: false, error };
+    }
+    return { sent: true, id: data?.id };
   } catch (err) {
-    console.error("Email send failed:", err);
+    console.error(`[email] Send threw for "${subject}" to ${to}:`, err);
     return { sent: false, error: err };
   }
 }
+
+export { isEmailConfigured };
 
 export async function sendWelcomeEmail(to: string, name: string) {
   return send(to, "Welcome to Seoul Glow Bangladesh 🌸", templates.welcomeEmail(name));
@@ -54,7 +80,7 @@ export async function sendAbandonedCartEmail(to: string, name: string, items: { 
 }
 
 export async function sendContactFormEmail(params: { name: string; email: string; subject: string; message: string }) {
-  const supportInbox = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || process.env.SMTP_USER;
+  const supportInbox = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
   if (!supportInbox) {
     console.log("[email:not-configured] No support inbox configured — contact form message logged only:", params);
     return { sent: false };

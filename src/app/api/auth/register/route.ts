@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     // this account existed — see linkGuestOrdersToAccount's doc comment.
     await linkGuestOrdersToAccount(user.id, user.email, phone);
 
-    // Fire-and-forget emails — never block or fail registration if SMTP isn't configured yet.
+    // Fire-and-forget emails — never block or fail registration if email isn't configured yet.
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
     signActionToken(user.id, "verify-email", "24h").then((token) => {
       sendVerificationEmail(user.email, user.name, `${siteUrl}/api/auth/verify-email?token=${token}`).catch(() => {});
