@@ -45,13 +45,13 @@ export default async function AdminOrdersPage({
   if (activePayment) where.paymentStatus = activePayment;
   if (q) {
     where.OR = [
-      { orderNumber: { contains: q } },
-      { shippingName: { contains: q } },
-      { shippingPhone: { contains: q } },
-      { guestEmail: { contains: q } },
-      { guestName: { contains: q } },
-      { user: { email: { contains: q } } },
-      { user: { name: { contains: q } } },
+      { orderNumber: { contains: q, mode: "insensitive" } },
+      { shippingName: { contains: q, mode: "insensitive" } },
+      { shippingPhone: { contains: q, mode: "insensitive" } },
+      { guestEmail: { contains: q, mode: "insensitive" } },
+      { guestName: { contains: q, mode: "insensitive" } },
+      { user: { email: { contains: q, mode: "insensitive" } } },
+      { user: { name: { contains: q, mode: "insensitive" } } },
     ];
   }
 

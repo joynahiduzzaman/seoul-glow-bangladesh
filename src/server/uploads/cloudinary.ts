@@ -1,0 +1,84 @@
+import { v2 as cloudinary } from "cloudinary";
+
+/**
+ * Cloudinary-backed image storage for product images.
+ *
+ * The previous implementation wrote into public/uploads/products, which works on
+ * a single always-on server but not on serverless hosting: the bundle filesystem
+ * is read-only, and even /tmp is per-invocation and never web-served. Uploads on
+ * Vercel therefore failed outright.
+ *
+ * Credentials are optional. When they are absent the caller falls back to the
+ * local filesystem, so `npm run dev` keeps working for anyone who has not signed
+ * up for Cloudinary — which is why this module never throws at import time.
+ */
+export const CLOUDINARY_FOLDER = "seoul-glow-bangladesh/products";
+
+export function isCloudinaryConfigured(): boolean {
+  return Boolean(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+  );
+}
+
+let configured = false;
+function configure() {
+  if (configured) return;
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true, // never hand back an http:// URL to embed in the storefront
+  });
+  configured = true;
+}
+
+export interface UploadedImage {
+  url: string;
+  publicId: string;
+  width?: number;
+  height?: number;
+  bytes?: number;
+}
+
+/**
+ * Uploads image bytes and resolves to the HTTPS delivery URL. The SDK's upload
+ * API is stream-based, so the buffer is fed through upload_stream rather than
+ * written to a temporary file (there is nowhere to write one).
+ */
+export async function uploadImage(bytes: Buffer, filename: string): Promise<UploadedImage> {
+  configure();
+
+  return new Promise<UploadedImage>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: CLOUDINARY_FOLDER,
+        resource_type: "image",
+        // Keep the original name as a hint but let Cloudinary guarantee uniqueness,
+        // so two "serum.jpg" uploads cannot overwrite one another.
+        public_id: filename.replace(/\.[^.]+$/, ""),
+        unique_filename: true,
+        use_filename: true,
+        overwrite: false,
+      },
+      (error, result) => {
+        if (error || !result) return reject(error ?? new Error("Cloudinary returned no result"));
+        resolve({
+          url: result.secure_url,
+          publicId: result.public_id,
+          width: result.width,
+          height: result.height,
+          bytes: result.bytes,
+        });
+      }
+    );
+    stream.end(bytes);
+  });
+}
+
+/** Best-effort removal; callers treat failure as non-fatal. */
+export async function deleteImage(publicId: string): Promise<void> {
+  configure();
+  await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+}

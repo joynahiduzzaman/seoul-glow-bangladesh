@@ -13,7 +13,7 @@ This is a real, working full-stack application: every page is connected to a liv
 >
 > **Also in this build**:
 > - **Hero rebuilt again**, this time to a premium cinematic standard: full-viewport-height rotating background photography with a slow Ken Burns zoom, animated stat counters (count up on load), real trust indicators, and floating product cards showing actual bestseller data (name/price/rating pulled from the database, never placeholder numbers). `framer-motion` is back and safe to use now that the CSP `unsafe-eval` bug above is fixed — but by design, the headline/copy/CTA buttons are never gated behind motion succeeding (see the comment at the top of `Hero.tsx`); only supplementary elements (background crossfade, particles, floating cards) depend on it.
-> - **Frontend/backend code reorganized** — backend-only modules (database client, auth/JWT, email, payment gateways, rate limiting) moved to a new `src/server/` folder, never imported by anything the browser runs. See §15 for the full map of what to edit where.
+> - **Frontend/backend code reorganized** — backend-only modules (database client, auth/JWT, email, payment gateways, rate limiting) moved to a new `src/server/` folder, never imported by anything the browser runs. See §16 for the full map of what to edit where.
 > - **Product card images** made smaller/inset for a more premium boutique look.
 >
 > Earlier fixes, kept for reference:
@@ -41,12 +41,14 @@ This is a real, working full-stack application: every page is connected to a liv
 # 1. Install dependencies
 npm install
 
-# 2. The .env file is already included with working defaults (SQLite database).
-#    Open .env and review it — at minimum you don't need to change anything to run locally.
+# 2. Copy .env.example to .env and set DATABASE_URL / DIRECT_URL to a Postgres
+#    database. A free Neon branch (neon.tech) is the quickest option; a local
+#    Postgres works too. The schema targets PostgreSQL — a SQLite "file:" URL
+#    will fail with a provider mismatch.
 
-# 3. Generate the Prisma client and create the database
+# 3. Generate the Prisma client and apply migrations
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 
 # 4. Seed the database with categories, brands, sample products, and demo accounts
 npm run db:seed
@@ -60,10 +62,19 @@ Open **http://localhost:3000**.
 Or run all of steps 1–4 in one go: `npm run setup`.
 
 ### Demo accounts (created by the seed script)
-| Role     | Email                        | Password      |
-|----------|-------------------------------|---------------|
-| Admin    | admin@seoulglow.com.bd        | Admin@123     |
-| Customer | customer@example.com          | Customer@123  |
+
+| Role     | Email                  |
+|----------|------------------------|
+| Admin    | admin@seoulglow.com.bd |
+| Customer | customer@example.com   |
+
+**Passwords are generated randomly on every seed run and printed once** — watch the output of
+`npm run db:seed` and save them. No password is hardcoded in the repository, so a known-password
+admin account cannot exist just because someone ran the seed. To choose them yourself, set
+`SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` before seeding.
+
+The seed refuses to run when `NODE_ENV=production`, because it deletes existing orders, reviews
+and users before inserting demo data.
 
 (The seed script also creates three more customer accounts — `reviewer1@example.com` through `reviewer3@example.com`, same password as above — purely as authors for the demo product reviews shown on the homepage and product pages.)
 
@@ -180,7 +191,60 @@ Point any scheduler at it every 30–60 minutes — [Vercel Cron](https://vercel
 
 `src/components/Product360Viewer.tsx` — drag (or swipe) to spin through a sequence of product photos, the standard e-commerce 360° pattern. Wired into the product page (`ProductMediaTabs.tsx`), which shows a "Photos / 360° View" toggle automatically **only when a product has 360 frames** (`Product.images360` in the schema). Seed data ships with regular photos only — add real 360-frame photography (ideally 24–36 images shot at even angle intervals) to a product's `images360` array to activate it for that product.
 
-## 9. Automated testing
+## 9. Image uploads (Cloudinary)
+
+Product images uploaded through the admin panel are stored in **Cloudinary**, not on the
+server's disk. This is not a preference — serverless hosts like Vercel give each request a
+read-only filesystem, so anything written into `public/uploads` either fails outright or
+disappears when the invocation ends. Cloudinary also serves the images from a CDN with
+automatic format negotiation, which is what you want for product photography anyway.
+
+### Creating an account and getting credentials
+
+1. Sign up free at **[cloudinary.com/users/register_free](https://cloudinary.com/users/register_free)**.
+   The free tier covers roughly 25 GB of storage and monthly bandwidth — far beyond what a
+   catalogue this size needs.
+2. After signing in you land on the **Dashboard**. The **Product Environment Credentials**
+   panel at the top shows three values:
+   - **Cloud Name** — e.g. `dxxxxxxxx` (not secret; it appears in every image URL)
+   - **API Key** — a numeric string
+   - **API Secret** — click the eye icon to reveal it. **Treat this like a password.**
+3. Copy all three.
+
+### Where to put them
+
+Local development — add to `.env` (which is gitignored):
+
+```bash
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="123456789012345"
+CLOUDINARY_API_SECRET="your-api-secret"
+```
+
+Production — add the same three in **Vercel → Project → Settings → Environment Variables**,
+for Production *and* Preview, then redeploy. These are read server-side only, so they are
+never exposed to the browser (note the deliberate absence of a `NEXT_PUBLIC_` prefix).
+
+### How uploads work
+
+`POST /api/admin/upload` accepts `multipart/form-data` with a `file` field and returns
+`{ url, publicId }`. The admin UI only consumes `url`, so nothing in the interface changed
+when storage moved. The route picks its backend at request time:
+
+| Condition | Behaviour |
+|---|---|
+| Cloudinary credentials present | Uploads to the `seoul-glow-bangladesh/products` folder, returns the HTTPS `secure_url` |
+| No credentials, running locally | Falls back to writing `public/uploads/products` — so `npm run dev` works with no signup |
+| No credentials, on Vercel | Returns **501** with an explanation, rather than an opaque filesystem error |
+
+Only the returned URL is stored in the database (`Product.images`), so switching storage
+providers later does not require a data migration — existing rows keep working because they
+hold absolute URLs. Uploads are restricted to `ADMIN`, `MANAGER` and `STAFF`, capped at 5 MB,
+and limited to JPG/PNG/WEBP/GIF. `res.cloudinary.com` is allowlisted in
+`next.config.mjs` under `images.remotePatterns`; without that entry `next/image` rejects
+the host and every uploaded image renders broken.
+
+## 10. Automated testing
 
 ```bash
 npm test          # run once
@@ -191,7 +255,7 @@ Vitest covers real logic, not placeholder assertions: currency/discount formatti
 
 ---
 
-## 10. Performance
+## 11. Performance
 
 - **ISR over force-SSR**: the homepage, product pages, and brand pages use Incremental Static Regeneration (`revalidate = 60`) instead of rendering fresh on every request — most visits are served cached HTML, with the underlying Prisma queries also cached via `unstable_cache` where a page reads a per-request cookie (locale) that would otherwise force full dynamic rendering.
 - **Self-hosted fonts**: `next/font/google` (Cormorant Garamond + Inter) instead of a CSS `@import` — fonts are downloaded once at build time and served from your own domain, avoiding a render-blocking round trip to Google Fonts and eliminating layout shift (`display: swap`).
@@ -202,7 +266,7 @@ Vitest covers real logic, not placeholder assertions: currency/discount formatti
 
 **Not yet done**: no bundle analyzer pass, no explicit code-splitting beyond Next's automatic per-route splitting, and the admin dashboard queries (revenue aggregates, low-stock lookups) aren't cached — acceptable for low admin traffic, but worth adding `unstable_cache` there too if the catalog grows large.
 
-## 11. Security
+## 12. Security
 
 - **CSRF protection** (`src/middleware.ts`): every state-changing API request (`POST`/`PATCH`/`DELETE`) is checked against its `Origin`/`Referer` header — a cross-site request is rejected with 403. This is defense-in-depth on top of `sameSite=lax` cookies, which already block most cross-site submissions. Payment-gateway callbacks and the cron endpoint are exempted (they're legitimately hit from outside the browser) and instead authenticate via server-to-server verification / a bearer secret respectively.
 - **Rate limiting** (`src/lib/rate-limit.ts`) on login (10/5min), registration (5/hour), password reset (3/15min), checkout (10/10min), cart-session tracking, and newsletter signup — all keyed by IP. In-memory by default — fine for a single instance; swap in Redis/Upstash for multi-instance deployments (see the code comment for the exact interface to match).
@@ -218,7 +282,7 @@ Vitest covers real logic, not placeholder assertions: currency/discount formatti
 
 ---
 
-## 12. Switching databases (MySQL / PostgreSQL / MariaDB / SQL Server)
+## 13. Switching databases (MySQL / PostgreSQL / MariaDB / SQL Server)
 
 The app defaults to SQLite so it runs with zero setup. To switch:
 
@@ -244,7 +308,7 @@ No application code needs to change — all queries go through Prisma's database
 
 ---
 
-## 13. Activating real payments (Bangladesh gateways)
+## 14. Activating real payments (Bangladesh gateways)
 
 Every gateway integration in `src/lib/payments/` makes real HTTP calls to that provider's sandbox/production API. To go live:
 
@@ -258,7 +322,7 @@ Visa/MasterCard/American Express and Rocket are routed through **SSLCommerz**, w
 
 ---
 
-## 14. Docker
+## 15. Docker
 
 ```bash
 docker compose up --build
@@ -268,7 +332,7 @@ docker compose up --build
 
 ---
 
-## 15. Project structure
+## 16. Project structure
 
 This is a single Next.js project (frontend and backend intentionally share one codebase —
 no CORS, no cross-origin cookies, one `npm install`, one server to run) but the code
@@ -330,13 +394,13 @@ setup later (e.g. multiple frontends hitting the same API), this is a well-trodd
 migration path — the `src/server/` folder above is already shaped to make that split
 easier if that day comes.
 
-## 16. Build for production
+## 17. Build for production
 
 ```bash
 npm run build
 npm start
 ```
 
-## 17. Environment variables
+## 18. Environment variables
 
 See `.env.example` for the full documented list (database, JWT secrets, payment gateway credentials, analytics IDs, contact info). Copy it to `.env` and fill in real values before deploying — the included `.env` has safe local-dev defaults only.

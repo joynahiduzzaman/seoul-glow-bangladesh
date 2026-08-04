@@ -28,6 +28,10 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
+      // Product images uploaded through the admin panel are served from
+      // Cloudinary. Without this entry next/image refuses the host outright and
+      // every uploaded image renders as a broken placeholder.
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
     ],
   },
   async redirects() {

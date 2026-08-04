@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { getCurrentUser } from "@/server/auth";
+import { isCloudinaryConfigured, uploadImage } from "@/server/uploads/cloudinary";
 
 // Local-filesystem upload, saved under /public/uploads/products so it's served
 // directly by Next.js with zero extra config — good for local dev and a single
@@ -41,25 +42,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Image must be under 5MB" }, { status: 400 });
   }
 
-  // On Vercel and similar serverless hosts the bundle directory is read-only, so
-  // the writes below fail with an opaque EROFS that surfaces in the admin UI as a
-  // generic 500. Detect it up front and say what is actually wrong and what to do,
-  // rather than letting an admin conclude the image was too large or malformed.
+  const filename = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}${extensionFor(file.type)}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+
+  // Preferred path: object storage. Required on serverless, where the bundle
+  // filesystem is read-only and per-invocation.
+  if (isCloudinaryConfigured()) {
+    try {
+      const uploaded = await uploadImage(bytes, filename);
+      return NextResponse.json({ url: uploaded.url, publicId: uploaded.publicId }, { status: 201 });
+    } catch (err) {
+      console.error("[admin/upload] Cloudinary upload failed:", err);
+      return NextResponse.json({ error: "Image upload failed. Please try again." }, { status: 502 });
+    }
+  }
+
+  // No credentials configured. On a serverless host there is no usable fallback,
+  // so say precisely what is missing rather than failing with an opaque EROFS
+  // that an admin would read as "my image was rejected".
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    console.error("[admin/upload] Filesystem uploads are unavailable on serverless hosting.");
+    console.error("[admin/upload] Cloudinary is not configured and the filesystem is read-only.");
     return NextResponse.json(
       {
         error:
-          "Image upload is not available on this deployment. The server's filesystem is " +
-          "read-only, so uploads need object storage (Vercel Blob, S3 or Cloudinary) to be " +
-          "configured. Paste an image URL instead for now.",
+          "Image upload is not configured on this deployment. Set CLOUDINARY_CLOUD_NAME, " +
+          "CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in the environment, then redeploy. " +
+          "You can paste an image URL directly in the meantime.",
       },
       { status: 501 }
     );
   }
 
-  const filename = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}${extensionFor(file.type)}`;
-  const bytes = Buffer.from(await file.arrayBuffer());
+  // Local development without Cloudinary credentials — keep working off disk.
   try {
     await mkdir(UPLOAD_DIR, { recursive: true });
     await writeFile(path.join(UPLOAD_DIR, filename), bytes);

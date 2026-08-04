@@ -21,12 +21,18 @@ export async function GET(req: NextRequest) {
   if (brand) where.brand = { slug: brand };
   // Matches product name, brand name, Korean name, and category — the search box
   // promises "products, brands, or concerns", so "COSRX" or "sunscreen" both work.
+  //
+  // `mode: "insensitive"` is load-bearing on PostgreSQL. Prisma compiles
+  // `contains` to SQL LIKE, which SQLite evaluates case-insensitively for ASCII
+  // but PostgreSQL does not — so after the move to Neon, "snail" matched nothing
+  // while "Snail" matched, and every lowercase search (i.e. how people actually
+  // type) silently returned an empty catalogue. This forces ILIKE.
   if (q) {
     where.OR = [
-      { name: { contains: q } },
-      { koreanName: { contains: q } },
-      { brand: { name: { contains: q } } },
-      { category: { name: { contains: q } } },
+      { name: { contains: q, mode: "insensitive" } },
+      { koreanName: { contains: q, mode: "insensitive" } },
+      { brand: { name: { contains: q, mode: "insensitive" } } },
+      { category: { name: { contains: q, mode: "insensitive" } } },
     ];
   }
   if (minPrice || maxPrice) {
@@ -53,7 +59,7 @@ export async function GET(req: NextRequest) {
 
   let products = await prisma.product.findMany({ where, orderBy, take: limit, include });
 
-  // Typo-tolerance fallback: SQLite's `contains` is an exact substring match, so
+  // Typo-tolerance fallback: `contains` is still an exact substring match, so
   // "sunscren" or "seurm" would otherwise come back empty. Only kicks in for the
   // suggestion dropdown (limit set) and only once exact matching came up short —
   // most searches never reach this, so the extra query is rare, not per-keystroke.

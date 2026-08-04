@@ -41,7 +41,7 @@ export default async function AdminProductsPage({
   const page = Math.max(1, Number(searchParams.page) || 1);
 
   const where: any = {};
-  if (q) where.OR = [{ name: { contains: q } }, { sku: { contains: q } }];
+  if (q) where.OR = [{ name: { contains: q, mode: "insensitive" } }, { sku: { contains: q, mode: "insensitive" } }];
   if (filter === "active") where.status = "ACTIVE";
   if (filter === "draft") where.status = "DRAFT";
   if (filter === "inStock") where.stock = { gte: 10 };

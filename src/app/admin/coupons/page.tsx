@@ -29,7 +29,7 @@ export default async function AdminCouponsPage({ searchParams }: { searchParams:
   const now = new Date();
 
   const where: any = {};
-  if (q) where.code = { contains: q.toUpperCase() };
+  if (q) where.code = { contains: q.toUpperCase(), mode: "insensitive" };
   if (status === "active") where.AND = [{ active: true }, { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }];
   if (status === "disabled") where.AND = [{ active: false }, { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }];
   if (status === "expired") where.expiresAt = { lte: now };

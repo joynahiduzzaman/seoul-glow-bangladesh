@@ -42,7 +42,7 @@ export default async function ShopPage({ searchParams }: Props) {
   const where: any = { status: "ACTIVE" };
   if (category) where.category = { slug: category };
   if (brand) where.brand = { slug: brand };
-  if (q) where.name = { contains: q };
+  if (q) where.name = { contains: q, mode: "insensitive" };
   if (minPrice || maxPrice) {
     where.price = {};
     if (minPrice) where.price.gte = Number(minPrice);

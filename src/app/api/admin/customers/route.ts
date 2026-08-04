@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const customers = await prisma.user.findMany({
     where: {
       role: "CUSTOMER",
-      OR: [{ name: { contains: q } }, { email: { contains: q } }, { phone: { contains: q } }],
+      OR: [{ name: { contains: q, mode: "insensitive" } }, { email: { contains: q, mode: "insensitive" } }, { phone: { contains: q, mode: "insensitive" } }],
     },
     select: {
       id: true,

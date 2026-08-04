@@ -18,7 +18,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
   expirySoonCutoff.setDate(expirySoonCutoff.getDate() + EXPIRY_SOON_DAYS);
 
   const where: any = {};
-  if (q) where.name = { contains: q };
+  if (q) where.name = { contains: q, mode: "insensitive" };
   if (filter === "low") where.stock = { gt: 0, lt: 10 };
   if (filter === "out") where.stock = 0;
   if (filter === "expiring") where.expiryDate = { gte: now, lte: expirySoonCutoff };
