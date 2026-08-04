@@ -33,3 +33,6 @@ public/uploads/products/*
 .verify-*.mjs
 .prod-*.mjs
 .audit-*.mjs
+
+# TypeScript incremental build cache — a build artifact, not source.
+tsconfig.tsbuildinfo
