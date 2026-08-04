@@ -76,6 +76,25 @@ admin account cannot exist just because someone ran the seed. To choose them you
 The seed refuses to run when `NODE_ENV=production`, because it deletes existing orders, reviews
 and users before inserting demo data.
 
+### Changing the admin password
+
+Normally: sign in, then **Account → Profile** (`/account/profile`). It asks for the current
+password and requires the new one to be at least 6 characters.
+
+If you're locked out, use the script — it writes directly to whatever `DATABASE_URL` points at,
+and prints the target host first so you can see whether you're about to change production:
+
+```bash
+npm run admin:password admin@seoulglow.com.bd              # generates and prints a password
+npm run admin:password admin@seoulglow.com.bd 'YourNewPass' # or set one explicitly
+```
+
+This matters because **`/forgot-password` cannot rescue the admin account today**. It emails a
+reset link, and while the project uses Resend's shared `onboarding@resend.dev` sender, delivery
+only works to the address that owns the Resend account. A link addressed to
+`admin@seoulglow.com.bd` is rejected by the provider and never arrives. Verifying a domain in
+Resend (see §4) removes this limitation.
+
 (The seed script also creates three more customer accounts — `reviewer1@example.com` through `reviewer3@example.com`, same password as above — purely as authors for the demo product reviews shown on the homepage and product pages.)
 
 Visit `/admin` after logging in as the admin account to see the dashboard, product manager, order manager, and coupon manager.
