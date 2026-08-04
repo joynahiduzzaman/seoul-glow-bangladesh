@@ -1,4 +1,5 @@
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+import { SITE_URL } from "@/lib/site-url";
+const siteUrl = SITE_URL;
 const brandColor = "#C68A8A";
 
 /** Wraps inner HTML content in a consistent branded email shell (logo header + footer). */

@@ -19,8 +19,9 @@ import Analytics from "@/components/Analytics";
 import { Toaster } from "react-hot-toast";
 import { getLocale } from "@/lib/i18n/get-locale";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+import { SITE_URL } from "@/lib/site-url";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+const siteUrl = SITE_URL;
 
 const playfair = Playfair_Display({
   subsets: ["latin"],

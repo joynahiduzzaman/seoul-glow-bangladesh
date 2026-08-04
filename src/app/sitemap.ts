@@ -1,11 +1,12 @@
 import { MetadataRoute } from "next";
 import { prisma } from "@/server/db";
+import { SITE_URL } from "@/lib/site-url";
 
 // Regenerate at most once an hour rather than hitting the DB on every crawler request.
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const siteUrl = SITE_URL;
   const [products, brands, categories] = await Promise.all([
     prisma.product.findMany({ where: { status: "ACTIVE" }, select: { slug: true, updatedAt: true } }),
     prisma.brand.findMany({ select: { slug: true } }),
