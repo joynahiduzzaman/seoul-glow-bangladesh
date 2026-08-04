@@ -2,19 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { getCurrentUser } from "@/server/auth";
-import { isCloudinaryConfigured, uploadImage } from "@/server/uploads/cloudinary";
+import { isCloudinaryConfigured, missingCloudinaryVars, uploadImage } from "@/server/uploads/cloudinary";
 
-// Local-filesystem upload, saved under /public/uploads/products so it's served
-// directly by Next.js with zero extra config — good for local dev and a single
-// always-on server. LIMITATION: on serverless hosts (e.g. Vercel) the filesystem
-// is read-only outside /tmp and isn't shared across instances, so files written
-// here won't persist or be visible to other requests in that kind of deployment.
-// For production on serverless, swap this for an object-storage upload (S3,
-// Cloudinary, etc.) — the admin UI only cares that this route returns a { url }.
+// Uploads go to Cloudinary when configured; the local filesystem path below is a
+// development convenience only. On serverless hosts the bundle directory is
+// read-only and /tmp is per-invocation and never web-served, so files written
+// there would not survive or be reachable.
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "products");
 const PUBLIC_PATH_PREFIX = "/uploads/products";
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
+// Vercel rejects serverless request bodies over ~4.5 MB at the platform edge,
+// before any of this code runs — the caller gets a bare 413 with no usable
+// message. The previous 5 MB ceiling was therefore unreachable in production: a
+// 4.6-5 MB image looked "allowed" but failed with an opaque platform error. Cap
+// below the platform limit, with headroom for multipart encoding overhead, so our
+// own validation is what actually fires and the admin sees a real explanation.
+const MAX_SIZE_BYTES = 4 * 1024 * 1024; // 4MB — must stay under Vercel's ~4.5MB body limit
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -39,7 +43,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Only JPG, PNG, WEBP, or GIF images are allowed" }, { status: 400 });
   }
   if (file.size > MAX_SIZE_BYTES) {
-    return NextResponse.json({ error: "Image must be under 5MB" }, { status: 400 });
+    return NextResponse.json({ error: "Image must be under 4MB" }, { status: 400 });
   }
 
   const filename = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}${extensionFor(file.type)}`;
@@ -61,13 +65,19 @@ export async function POST(req: NextRequest) {
   // so say precisely what is missing rather than failing with an opaque EROFS
   // that an admin would read as "my image was rejected".
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    console.error("[admin/upload] Cloudinary is not configured and the filesystem is read-only.");
+    // Name the specific variables that are missing. Vercel snapshots environment
+    // variables into a deployment when it is created, so adding them in project
+    // settings does nothing until a redeploy — which is indistinguishable from a
+    // typo or a blank value unless the error says which names it could not see.
+    const missing = missingCloudinaryVars();
+    console.error("[admin/upload] Cloudinary not configured; missing:", missing.join(", "));
     return NextResponse.json(
       {
         error:
-          "Image upload is not configured on this deployment. Set CLOUDINARY_CLOUD_NAME, " +
-          "CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in the environment, then redeploy. " +
-          "You can paste an image URL directly in the meantime.",
+          `Image upload is not configured on this deployment. Missing or blank: ${missing.join(", ")}. ` +
+          "Set them in the environment and redeploy — Vercel only applies new variables to " +
+          "deployments created after they were added. You can paste an image URL in the meantime.",
+        missing,
       },
       { status: 501 }
     );

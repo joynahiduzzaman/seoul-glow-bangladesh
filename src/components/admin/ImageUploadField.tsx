@@ -147,7 +147,7 @@ export default function ImageUploadField({
           </button>
         </div>
       </div>
-      <p className="text-[11px] text-ink/35 mt-2">JPG, PNG, WEBP, or GIF · up to 5MB each · drag to reorder · first image is used as the cover photo.</p>
+      <p className="text-[11px] text-ink/35 mt-2">JPG, PNG, WEBP, or GIF · up to 4MB each · drag to reorder · first image is used as the cover photo.</p>
     </div>
   );
 }

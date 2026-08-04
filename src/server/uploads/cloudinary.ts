@@ -14,12 +14,20 @@ import { v2 as cloudinary } from "cloudinary";
  */
 export const CLOUDINARY_FOLDER = "seoul-glow-bangladesh/products";
 
+const REQUIRED_VARS = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"] as const;
+
+/**
+ * Names of the credentials that are absent or blank. Returns names only — never
+ * values — so it is safe to surface in an error response. A variable that exists
+ * but holds an empty string counts as missing, which is the usual outcome of
+ * bulk-pasting an .env template whose placeholders were never filled in.
+ */
+export function missingCloudinaryVars(): string[] {
+  return REQUIRED_VARS.filter((k) => !process.env[k] || process.env[k]!.trim() === "");
+}
+
 export function isCloudinaryConfigured(): boolean {
-  return Boolean(
-    process.env.CLOUDINARY_CLOUD_NAME &&
-      process.env.CLOUDINARY_API_KEY &&
-      process.env.CLOUDINARY_API_SECRET
-  );
+  return missingCloudinaryVars().length === 0;
 }
 
 let configured = false;
