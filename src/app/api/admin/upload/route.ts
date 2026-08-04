@@ -56,8 +56,19 @@ export async function POST(req: NextRequest) {
       const uploaded = await uploadImage(bytes, filename);
       return NextResponse.json({ url: uploaded.url, publicId: uploaded.publicId }, { status: 201 });
     } catch (err) {
-      console.error("[admin/upload] Cloudinary upload failed:", err);
-      return NextResponse.json({ error: "Image upload failed. Please try again." }, { status: 502 });
+      // Surface Cloudinary's own reason. Its failures are configuration
+      // diagnostics ("Invalid api_key", "Invalid Signature", "Invalid cloud_name")
+      // rather than anything sensitive, and without them a 502 is indistinguishable
+      // from a network blip — leaving an admin no way to tell a typo'd key from an
+      // outage. Only the provider's message is echoed, never our credentials.
+      const reason =
+        (err as { message?: string })?.message ??
+        (typeof err === "string" ? err : "unknown error");
+      console.error("[admin/upload] Cloudinary upload failed:", reason, err);
+      return NextResponse.json(
+        { error: `Image upload failed: ${reason}`, provider: "cloudinary" },
+        { status: 502 }
+      );
     }
   }
 

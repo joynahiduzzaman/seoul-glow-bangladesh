@@ -63,11 +63,11 @@ export async function uploadImage(bytes: Buffer, filename: string): Promise<Uplo
       {
         folder: CLOUDINARY_FOLDER,
         resource_type: "image",
-        // Keep the original name as a hint but let Cloudinary guarantee uniqueness,
-        // so two "serum.jpg" uploads cannot overwrite one another.
+        // The caller already prefixes a timestamp and a UUID fragment, so the id
+        // is unique on its own. use_filename/unique_filename are deliberately
+        // omitted: Cloudinary ignores them whenever an explicit public_id is
+        // given, and passing all three together is contradictory.
         public_id: filename.replace(/\.[^.]+$/, ""),
-        unique_filename: true,
-        use_filename: true,
         overwrite: false,
       },
       (error, result) => {
