@@ -41,6 +41,13 @@ const productSchema = z.object({
 });
 
 export async function GET() {
+  // This returns the full admin row — costPrice, batchNumber, stock — and every
+  // product regardless of status, including unpublished DRAFTs. POST was guarded
+  // but GET was not, so the whole catalogue with supplier costs was readable
+  // without a session. Storefront callers have /api/products for public fields.
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
   const products = await prisma.product.findMany({
     include: { brand: { select: { name: true } }, category: { select: { name: true } } },
     orderBy: { createdAt: "desc" },

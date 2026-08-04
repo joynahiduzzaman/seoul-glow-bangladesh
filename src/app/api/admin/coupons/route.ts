@@ -16,6 +16,14 @@ const schema = z.object({
 });
 
 export async function GET() {
+  // POST was guarded but GET was not, which published every discount code —
+  // including inactive and unlisted ones — to anonymous callers who could then
+  // simply redeem them at checkout.
+  const user = await getCurrentUser();
+  if (!user || !["ADMIN", "MANAGER"].includes(user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const coupons = await prisma.coupon.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json({ coupons });
 }

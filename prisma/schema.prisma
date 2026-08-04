@@ -9,8 +9,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite" // change to "mysql" | "postgresql" | "sqlserver" for production
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  // Neon serves two endpoints for the same database. Runtime queries go through
+  // the PgBouncer pooler (DATABASE_URL) so serverless invocations don't exhaust
+  // connections; Prisma Migrate needs session-level features the pooler does not
+  // support, so schema changes use the direct endpoint (DIRECT_URL).
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // NOTE: these were originally Prisma `enum` types, but SQLite (our zero-config default

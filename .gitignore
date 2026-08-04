@@ -10,6 +10,15 @@ dist
 *.db-journal
 dev.db
 prisma/dev.db
+
+# Database snapshots taken before migrations. These are full copies of the
+# database with real customer data, and the .bak suffix means the *.db rule
+# above does not cover them.
+backups/
+*.bak
+*.sqlite
+*.sqlite3
+*.dump
 .DS_Store
 npm-debug.log*
 
