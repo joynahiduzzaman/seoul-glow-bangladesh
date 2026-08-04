@@ -1,0 +1,527 @@
+// Seoul Glow Bangladesh — Database Schema
+// Default datasource is SQLite so the project runs instantly with zero setup.
+// To switch to MySQL/PostgreSQL/MariaDB/SQL Server, change `provider` and `url` below
+// (see README.md -> "Switching databases"). Because we avoid DB-specific SQL and rely
+// entirely on Prisma's query engine, no application code needs to change.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // change to "mysql" | "postgresql" | "sqlserver" for production
+  url      = env("DATABASE_URL")
+}
+
+// NOTE: these were originally Prisma `enum` types, but SQLite (our zero-config default
+// database) doesn't support native enums. They're plain Strings instead, with valid values
+// documented here and enforced at the application layer via zod (see the relevant API routes).
+// If you switch to MySQL/PostgreSQL (see README §12), you can convert these back to real
+// `enum` blocks if you prefer — the app code only ever compares/assigns string literals,
+// so nothing else needs to change either way.
+//
+// Role:                    CUSTOMER | ADMIN | MANAGER | STAFF
+// OrderStatus:             DRAFT | PENDING | CONFIRMED | PACKED | SHIPPED | DELIVERED | CANCELLED | RETURNED | REFUNDED (see src/lib/order-status.ts)
+// PaymentMethod:           COD | BKASH | NAGAD | ROCKET | SSLCOMMERZ | SHURJOPAY | CARD | STORE (see src/lib/payment.ts)
+// PaymentStatus:           PENDING | PAID | PARTIAL | REFUNDED | FAILED (order-level summary — see src/lib/order-status.ts)
+// PaymentVerificationStatus: UNVERIFIED | VERIFIED | REJECTED (per-Payment-record reconciliation state — see src/lib/payment.ts)
+// Courier:                 STEADFAST | PATHAO | REDX | PAPERFLY | CUSTOM (see src/lib/shipping.ts)
+// DeliveryStatus:           PENDING | PICKED_UP | IN_TRANSIT | OUT_FOR_DELIVERY | DELIVERED | FAILED | RETURNED (see src/lib/shipping.ts)
+// ProductTexture:           GEL | CREAM | FOAM | OIL | WATER | BALM | LIQUID | POWDER | STICK (see src/lib/product-texture.ts)
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  phone         String?   @unique
+  // Nullable because Google/Facebook sign-in creates an account with no password —
+  // those users authenticate purely via OAuth. Password-login must check this isn't
+  // null before comparing (see /api/auth/login).
+  password      String?
+  // Set when the account was created (or linked) via social sign-in. Null for
+  // regular email/phone + password accounts.
+  oauthProvider String?
+  oauthId       String?
+  role          String    @default("CUSTOMER")
+  emailVerified Boolean   @default(false)
+  marketingOptIn Boolean  @default(true)
+  referralCode  String    @unique
+  referredById  String?
+  referredBy    User?     @relation("Referrals", fields: [referredById], references: [id])
+  referrals     User[]    @relation("Referrals")
+  commissions   Commission[]
+  addresses     Address[]
+  orders        Order[]
+  assignedOrders Order[]  @relation("AssignedOrders")
+  createdOrders  Order[]  @relation("CreatedOrders")
+  verifiedPayments Payment[] @relation("VerifiedPayments")
+  assignedShipments Shipment[] @relation("ShipmentAssignments")
+  reviews       Review[]
+  wishlist      WishlistItem[]
+  notifications Notification[]
+  supportTickets SupportTicket[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([oauthProvider, oauthId])
+}
+
+model Commission {
+  id          String   @id @default(cuid())
+  referrer    User     @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+  referrerId  String
+  orderId     String
+  orderNumber String
+  amount      Float
+  status      String   @default("PENDING") // PENDING | PAID
+  createdAt   DateTime @default(now())
+}
+
+model CartSession {
+  id          String   @id @default(cuid())
+  email       String?
+  name        String?
+  phone       String?
+  itemsJson   String   // JSON snapshot of cart items at the time checkout was started
+  total       Float
+  recovered   Boolean  @default(false)
+  emailedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  label     String   @default("Home")
+  fullName  String
+  phone     String
+  district  String
+  area      String
+  street    String
+  isInsideDhaka Boolean @default(true)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Brand {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  logo        String?
+  banner      String?
+  story       String?
+  country     String    @default("South Korea")
+  products    Product[]
+  createdAt   DateTime  @default(now())
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  image     String?
+  products  Product[]
+  createdAt DateTime   @default(now())
+}
+
+// A running log of every manual stock change plus automatic ones (order placed,
+// order cancelled/restored) — powers the Inventory "Stock History" view. Additive
+// only: nothing else reads or depends on this table, so it can't break existing
+// checkout/order behavior even though writes to it happen from that code path too.
+model StockAdjustment {
+  id            String   @id @default(cuid())
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId     String
+  change        Int // positive = stock added, negative = stock removed
+  previousStock Int
+  newStock      Int
+  reason        String // e.g. "Manual adjustment", "Order SGB260713-1234 placed", "Order SGB260713-1234 cancelled"
+  adjustedBy    String? // admin user's name, or null for system-generated (order placed/cancelled)
+  createdAt     DateTime @default(now())
+
+  @@index([productId])
+}
+
+// Global business information (phone, email, address, opening hours, social
+// links) editable from Admin → Site Content → Business Info. Key/value rather
+// than one wide row so a new field is a schema-free addition — see
+// BUSINESS_FIELDS in src/lib/site-content.ts for the field definitions.
+//
+// This deliberately supersedes the NEXT_PUBLIC_* contact env vars for anything
+// rendered on the storefront: env vars are baked in at build time, so changing
+// a phone number used to require a redeploy. Values here are read at request
+// time, so an edit is live immediately. The env vars remain as the fallback
+// when a key has never been set.
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// Editable copy/imagery for the static content pages (About, Contact, FAQ, and
+// the policy pages). One row per page; `content` is a JSON string whose shape
+// is described by that page's field definitions in src/lib/site-content.ts.
+//
+// Same read-time-merge approach as the Homepage Builder: a missing row or a
+// missing key falls back to the code-level default, so every page renders
+// exactly as shipped until an admin actually overrides something. Nothing is
+// backfilled into this table automatically.
+model PageContent {
+  pageKey   String   @id
+  content   String   @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+// Drives the Homepage Builder — one row per homepage section. The live homepage
+// reads this table (enabled rows, sorted by displayOrder) instead of a hardcoded
+// section list, so reordering/enabling/disabling never requires a code change.
+// `settings` is a JSON string; its shape depends on `sectionKey` (see
+// src/lib/homepage-sections.ts for the per-section-type field definitions).
+model HomepageSection {
+  id           String    @id @default(cuid())
+  sectionKey   String    @unique // "hero" | "categories" | "bestSellers" | etc — see homepage-sections.ts
+  title        String
+  settings     String    @default("{}")
+  displayOrder Int       @default(0)
+  enabled      Boolean   @default(true)
+  // status/publishAt/unpublishAt add draft + scheduled-publish support on top of the
+  // existing manual `enabled` switch. `enabled` stays the instant on/off toggle;
+  // these three add "not ready yet" (DRAFT) and "go live/hide at a specific time"
+  // without ever needing a second table — see src/lib/homepage-visibility.ts for the
+  // combined rule all three (plus `enabled`) resolve to.
+  status       String    @default("PUBLISHED") // "DRAFT" | "PUBLISHED"
+  publishAt    DateTime?
+  unpublishAt  DateTime?
+  // True for admin-created instances of a repeatable template (currently just
+  // "customBanner:<id>" sectionKeys) — these can be freely duplicated and deleted.
+  // Built-in singleton sections (hero, categories, etc.) always have this false.
+  isCustom     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  revisions    HomepageSectionRevision[]
+
+  @@index([displayOrder])
+}
+
+// One row per saved edit to a HomepageSection — a snapshot taken immediately
+// BEFORE a PATCH is applied, so it always holds the state the admin is moving
+// away from. Powers the Homepage Builder's revision history + restore. Capped
+// at REVISION_LIMIT per section (see the homepage-sections API route) so this
+// table can't grow unbounded on a frequently-edited section.
+model HomepageSectionRevision {
+  id          String   @id @default(cuid())
+  section     HomepageSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  sectionId   String
+  title       String
+  settings    String
+  status      String
+  publishAt   DateTime?
+  unpublishAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([sectionId, createdAt])
+}
+
+model Product {
+  id              String   @id @default(cuid())
+  name            String
+  koreanName      String?
+  banglaName      String?
+  slug            String   @unique
+  brand           Brand    @relation(fields: [brandId], references: [id])
+  brandId         String
+  category        Category @relation(fields: [categoryId], references: [id])
+  categoryId      String
+  description     String
+  ingredients     String?
+  howToUse        String?
+  skinType        String   @default("[]") // JSON string array, kept DB-agnostic
+  skinConcern     String   @default("[]")
+  benefits        String   @default("[]")
+  warnings        String?
+  countryOfOrigin String   @default("South Korea")
+  batchNumber     String?
+  authenticityCode String?
+  barcode         String?
+  // Texture is a single descriptive value (Gel, Cream, Foam, Oil, Water, Balm,
+  // Essence/Liquid) — unlike skinType/skinConcern this isn't multi-select, so
+  // it's a plain nullable string rather than a JSON array.
+  texture         String?
+  // Optional — older/seeded products predate this and many Korean skincare
+  // products don't print a hard expiry (PAO "months after opening" instead), so
+  // this is never required. Used for the admin expiry-alert dashboard.
+  expiryDate      DateTime?
+  images          String   @default("[]") // JSON string array of image URLs
+  images360       String   @default("[]") // JSON string array of rotation frames for the 360° viewer (optional)
+  sku             String?  @unique
+  metaTitle       String?
+  metaDescription String?
+  // ACTIVE | DRAFT — controls storefront visibility. "Out of Stock" is intentionally
+  // NOT a stored status value here; it's derived from `stock === 0` wherever a product
+  // status badge is shown, so there's one source of truth instead of two fields that
+  // could disagree (e.g. status=ACTIVE but stock=0).
+  status          String   @default("ACTIVE")
+  // `price` is the SELLING price shown to customers. `costPrice` is what the
+  // shop paid the supplier — optional (older products predate it, and it isn't
+  // always known at the time a product is created) and never exposed on any
+  // storefront route, only in the admin where margin is calculated from it.
+  price           Float
+  costPrice       Float?
+  discountPercent Int      @default(0)
+  stock           Int      @default(0)
+  weightGrams     Int?
+  volumeMl        Int?
+  isFeatured      Boolean  @default(false)
+  isBestSeller    Boolean  @default(false)
+  isNewArrival    Boolean  @default(false)
+  isFlashSale     Boolean  @default(false)
+  isTrending      Boolean  @default(false)
+  reviews         Review[]
+  orderItems      OrderItem[]
+  wishlistItems   WishlistItem[]
+  stockAdjustments StockAdjustment[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([brandId])
+  // Every storefront query filters `status: "ACTIVE"`, usually alongside a
+  // category or brand — the composites let those be served from an index
+  // instead of scanning and then filtering.
+  @@index([status])
+  @@index([status, categoryId])
+  @@index([status, brandId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  rating     Int
+  title      String?
+  comment    String
+  verified   Boolean  @default(false)
+  adminReply String?
+  helpfulVotes Int    @default(0)
+  createdAt  DateTime @default(now())
+
+  // Every product page loads its reviews by productId, and the account area
+  // lists a customer's own reviews by userId. Neither had an index — Prisma
+  // does not create them for relation fields automatically — so both were full
+  // table scans that only look fine while the table is small.
+  @@index([productId])
+  @@index([userId])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+model Coupon {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  type           String   @default("PERCENT") // PERCENT | FIXED
+  value          Float
+  minSpend       Float    @default(0)
+  usageLimit     Int?
+  usedCount      Int      @default(0)
+  expiresAt      DateTime?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+}
+
+model Order {
+  id             String        @id @default(cuid())
+  orderNumber    String        @unique
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId         String?
+  guestEmail     String?
+  guestName      String?
+  guestPhone     String?
+  items          OrderItem[]
+  subtotal       Float
+  discount       Float         @default(0)
+  shippingFee    Float         @default(0)
+  tax            Float         @default(0)
+  total          Float
+  couponCode     String?
+  status         String        @default("PENDING")
+  paymentMethod  String        @default("COD")
+  paymentStatus  String        @default("PENDING")
+  gatewayTransactionId String? // paymentID/val_id/etc. returned by the gateway at initPayment — used to look up the order in the callback for server-to-server verification
+  shippingLabel  String        @default("Home")
+  shippingName   String
+  shippingPhone  String
+  shippingDistrict String
+  shippingArea   String
+  shippingStreet String
+  insideDhaka    Boolean       @default(true)
+  giftNote       String?
+  // Staff ownership for order handling — distinct relation name from `user`
+  // (the customer who placed the order) since both point at User.
+  assignedStaff   User?        @relation("AssignedOrders", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  assignedStaffId String?
+  // Sales channel — "ONLINE" for the real storefront checkout, or the channel an
+  // admin picked when recording a manual order (phone/Messenger/walk-in).
+  source          String        @default("ONLINE")
+  // Which admin recorded this order, when it wasn't a customer's own checkout —
+  // distinct from `assignedStaff` (who's currently handling fulfillment, which
+  // can change) and from `user` (the customer, if this order is linked to one).
+  createdByStaff   User?        @relation("CreatedOrders", fields: [createdByStaffId], references: [id], onDelete: SetNull)
+  createdByStaffId String?
+  events         OrderEvent[]
+  payments       Payment[]
+  shipment       Shipment?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([assignedStaffId])
+  @@index([createdByStaffId])
+  // Hot paths that were unindexed:
+  //  userId               — "My Orders" and every per-customer lookup.
+  //  status               — the admin order filters and every dashboard count.
+  //  createdAt            — dashboard "today"/"last 7 days" ranges and the
+  //                         default newest-first ordering on every order list.
+  //  gatewayTransactionId — the bKash callback resolves the order by this on
+  //                         every payment, so it sits on the money path.
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([gatewayTransactionId])
+}
+
+// One row per payment attempt/collection recorded against an order — supports
+// partial/installment payments (multiple rows) and manual reconciliation
+// (admin cross-checks transactionId/senderNumber against their own bKash/Nagad/
+// bank statement, then marks it VERIFIED or REJECTED). Gateway-verified online
+// payments also land here automatically (see src/server/payments/confirm.ts)
+// so this is the single ledger regardless of how an order was paid — the
+// Order.paymentStatus summary field is recomputed from the sum of VERIFIED
+// rows (see src/server/payment-reconciliation.ts) whenever one changes.
+model Payment {
+  id                 String    @id @default(cuid())
+  order              Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId            String
+  method             String    // COD | BKASH | NAGAD | CARD | STORE
+  amount             Float
+  transactionId      String?
+  senderNumber       String?   // bKash/Nagad sender's phone number, for mobile-banking reconciliation
+  verificationStatus String    @default("UNVERIFIED") // UNVERIFIED | VERIFIED | REJECTED
+  verifiedBy         User?     @relation("VerifiedPayments", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedById       String?
+  verifiedAt         DateTime?
+  paidAt             DateTime  @default(now())
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([orderId])
+}
+
+// At most one active shipment per order. Courier is a fixed list (Steadfast/
+// Pathao/RedX/Paperfly) plus CUSTOM for anything else — see src/server/couriers/
+// for the provider abstraction (createShipment is a no-op stub per carrier
+// until real API credentials are added, matching how src/server/payments/
+// gateways fall back gracefully when unconfigured rather than failing).
+model Shipment {
+  id                String    @id @default(cuid())
+  order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId           String    @unique
+  courier           String    // STEADFAST | PATHAO | REDX | PAPERFLY | CUSTOM
+  customCourierName String?   // set when courier = CUSTOM
+  trackingNumber    String?
+  deliveryStatus    String    @default("PENDING") // PENDING | PICKED_UP | IN_TRANSIT | OUT_FOR_DELIVERY | DELIVERED | FAILED | RETURNED
+  estimatedDelivery DateTime?
+  shippingNotes     String?
+  assignedBy        User?     @relation("ShipmentAssignments", fields: [assignedById], references: [id], onDelete: SetNull)
+  assignedById      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([orderId])
+}
+
+// Chronological audit trail for one order — status changes, payment status changes,
+// tracking/courier updates, staff assignment, and internal notes all land here as a
+// single unified feed (the same "notes + events together" pattern Shopify's order
+// timeline uses). The very first entry ("Order placed") is derived from
+// Order.createdAt at render time rather than stored here, so orders that existed
+// before this table did still show a complete, accurate timeline.
+model OrderEvent {
+  id        String   @id @default(cuid())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  type      String   // STATUS_CHANGE | PAYMENT_CHANGE | NOTE | ASSIGNMENT | TRACKING
+  message   String
+  createdBy String   // staff member's name, or "System" for automated changes
+  createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+  name      String
+  image     String?
+  price     Float
+  quantity  Int
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      String   // ORDER_PLACED | ORDER_STATUS | WELCOME | GENERAL
+  title     String
+  message   String
+  link      String?  // optional in-app link, e.g. /account/orders/SGB260713-1234
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model SupportTicket {
+  id          String        @id @default(cuid())
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  subject     String
+  orderNumber String?       // optional — lets a customer reference a specific order
+  status      String        @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED | CLOSED
+  replies     TicketReply[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model TicketReply {
+  id         String        @id @default(cuid())
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId   String
+  message    String
+  isFromStaff Boolean      @default(false)
+  authorName String
+  createdAt  DateTime      @default(now())
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}

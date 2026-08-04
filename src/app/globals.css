@@ -1,0 +1,283 @@
+/* Fonts are loaded via next/font in layout.tsx (self-hosted, non-render-blocking)
+   instead of a CSS @import, which is faster and avoids an extra round-trip to Google. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+
+body {
+  @apply bg-cream text-ink font-sans antialiased;
+  /* Slightly open tracking + generous leading is what separates "editorial" from
+     "web default" at body sizes — matches the Aesop/Tamburins reading feel. */
+  letter-spacing: 0.005em;
+}
+
+::selection {
+  background-color: #C68A8A;
+  color: white;
+}
+
+/* Visible keyboard focus everywhere — invisible to mouse users, essential for anyone
+   navigating by keyboard. A polished site never suppresses this. */
+:focus-visible {
+  outline: 2px solid #C68A8A;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Serif display face. Ligatures + kerning are enabled explicitly because large
+   headline sizes are exactly where the browser's defaults look loose/amateur. */
+.font-display {
+  font-family: var(--font-serif), 'Playfair Display', serif;
+  font-feature-settings: "liga" 1, "kern" 1;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Buttons: 48px tall, 12px radius — soft-luxury rectangles rather than pills, per
+   the brand brief. Micro-interaction is a small lift + shadow bloom, never a bounce. */
+/* The fill is #A35252, not the brand `rose-gold` (#C68A8A). White text on the
+   original measured 2.84:1 — the site's single most-used control failing the
+   4.5:1 AA floor by a wide margin, i.e. the primary CTA was the least readable
+   text on the page. #A35252 is the SAME hue and saturation with lightness
+   dropped only as far as needed to pass (5.40:1); the hover shade keeps pace at
+   6.20:1. `rose-gold` itself is untouched, so borders, icons and tints across
+   the rest of the site look exactly as before. */
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-[#A35252] px-7 text-sm font-medium text-white shadow-e2 transition-all duration-300 ease-silk hover:bg-[#954B4B] hover:shadow-e3 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none;
+}
+
+/* Outline variant: the label is text on cream, so it needs the text-safe accent
+   (5.58:1) rather than `rose-gold` (2.65:1). The border keeps the brand tone —
+   a border is not text and carries no contrast requirement. Hover inverts to the
+   same accessible fill used by .btn-primary. */
+.btn-outline {
+  @apply inline-flex items-center justify-center gap-2 h-12 rounded-xl border border-rose-gold px-7 text-sm font-medium text-rose-gold-text transition-all duration-300 ease-silk hover:bg-[#A35252] hover:text-white hover:border-[#A35252] hover:-translate-y-0.5 hover:shadow-e2 active:translate-y-0 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none;
+}
+
+/* Secondary action sitting on dark imagery (hero, dark sections) — a white
+   hairline that inverts on hover. Kept here rather than inline so both hero
+   variants and any future dark section stay identical. */
+.btn-on-dark {
+  @apply inline-flex items-center justify-center gap-2 h-12 rounded-xl border border-white/40 px-7 text-sm font-medium text-white backdrop-blur-sm transition-all duration-300 ease-silk hover:bg-white hover:text-ink hover:border-white hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98];
+}
+
+/* Quiet third action — for "Back", "Cancel", inline secondary links that
+   shouldn't compete with the two branded buttons above. */
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 h-12 rounded-xl border border-border-soft bg-white px-7 text-sm font-medium text-ink/70 transition-all duration-300 ease-silk hover:border-ink/20 hover:text-ink hover:shadow-e1 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none;
+}
+
+/* Consistent card elevation used across admin tables, testimonials, dashboards —
+   one place to tune "how much a card lifts off the page" for the whole site. */
+.card-surface {
+  @apply bg-white rounded-xl2 shadow-e2 transition-all duration-300 ease-silk hover:shadow-e3;
+}
+
+/* Interactive card — adds the lift. Static content cards use .card-surface so
+   they don't animate on hover for no reason. */
+.card-interactive {
+  @apply card-surface hover:-translate-y-1;
+}
+
+.section-title {
+  @apply font-display text-3xl md:text-4xl font-semibold text-ink tracking-tight;
+}
+
+/* Small caps-style eyebrow above section titles — the editorial cue that gives a
+   section hierarchy without adding another heavy headline. */
+/* Uses the text-safe accent: at 11px this is small text, so it needs the full
+   4.5:1 AA ratio. Plain `text-rose-gold` measured 2.65:1 here. */
+.eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-rose-gold-text;
+}
+
+/* Shared control surface for text inputs / selects / textareas so every form on
+   the site (checkout, auth, account, contact, admin) has identical height,
+   radius, border and focus treatment instead of each page re-declaring them. */
+.field {
+  @apply w-full rounded-xl border border-border-soft bg-white px-4 py-3 text-sm text-ink
+         placeholder:text-ink/35 transition-all duration-200
+         hover:border-ink/20
+         focus:border-rose-gold focus:outline-none focus:ring-4 focus:ring-rose-gold/10;
+}
+
+.field-error {
+  @apply border-badge-sale focus:border-badge-sale focus:ring-badge-sale/10;
+}
+
+.field-label {
+  @apply block text-xs font-medium text-ink/70 mb-1.5;
+}
+
+/* Animated gradient ring for search fields.
+   Implemented as a 1.5px gradient-filled wrapper with a solid inner surface
+   (the "padding border" technique) rather than `border-image`, because
+   border-image can't be combined with border-radius. The gradient is 200% wide
+   so panning the background position loops seamlessly.
+   Palette is the brand's own rose-gold → gold → soft-pink rather than the
+   generic blue/purple/pink, so it reads as Seoul Glow rather than as a
+   template. Idle state is a faint tint; the full-saturation pan only runs
+   while the field is focused, so it's a reward for interacting rather than
+   permanent motion competing for attention. */
+.gradient-ring {
+  padding: 1.5px;
+  background-image: linear-gradient(
+    90deg,
+    theme("colors.rose-gold"),
+    theme("colors.gold"),
+    theme("colors.soft-pink"),
+    theme("colors.rose-gold-light"),
+    theme("colors.rose-gold")
+  );
+  background-size: 200% 100%;
+  background-position: 0% 50%;
+  transition: opacity 300ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  opacity: 0.35;
+}
+
+.gradient-ring-active {
+  opacity: 1;
+  animation: gradient-pan 3.5s linear infinite;
+}
+
+@keyframes gradient-pan {
+  to {
+    background-position: 200% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-ring-active {
+    animation: none;
+  }
+}
+
+/* Loading skeleton — a sweep of light across a neutral block. Preferred over a
+   pulsing opacity because it reads as "content arriving" rather than "broken". */
+.skeleton {
+  @apply relative overflow-hidden bg-beige/70;
+}
+.skeleton::after {
+  content: "";
+  @apply absolute inset-0 -translate-x-full animate-shimmer;
+  background-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+}
+
+/* Hairline divider that fades at both ends — softer than a full-width 1px rule. */
+.rule-fade {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, theme("colors.border-soft"), transparent);
+}
+
+.container-px {
+  @apply px-5 md:px-10 lg:px-16;
+}
+
+/* Safe-area utilities — pairs with viewportFit:"cover" in layout.tsx's viewport
+   export (without that, these env() variables are always 0 and do nothing).
+   Apply to anything fixed/sticky at a physical screen edge: bottom action bars,
+   sticky add-to-cart, floating chat/back-to-top buttons, mobile drawers. */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-left {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.safe-right {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Minimum comfortable touch target (Apple HIG / Material both recommend ~44px) —
+   applied to small icon-only buttons that would otherwise be tappable at their
+   visual icon size only (e.g. a 16px icon with no padding is a 16px tap target).
+   Wrapped in @layer components (lower precedence than Tailwind's utilities
+   layer) so its unconditional `display: flex` can always be overridden by a
+   real utility — plain CSS written after `@tailwind utilities;`, or even a
+   `@layer utilities` block, still loses to nothing and instead WINS the
+   cascade over `hidden`/`sm:flex` by source order, permanently defeating the
+   responsive hide/show on any element combining `hidden sm:flex touch-target`. */
+@layer components {
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+  }
+}
+
+/* Vertical rhythm for homepage/marketing sections — one class instead of
+   repeating py-24/py-32 by hand on every section.
+   Sized as *per-section* padding, so the gap a visitor actually sees between two
+   adjacent sections is double this (≈160px on desktop). The earlier lg:py-32
+   produced a 256px gap, which read as dead space rather than breathing room and
+   visually disconnected each section from the next. */
+.section-py {
+  @apply py-14 md:py-16 lg:py-20;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 22s linear infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-16px) translateX(4px); }
+}
+
+.animate-float {
+  animation: float ease-in-out infinite;
+}
+
+/* Print-preview pages (invoice / packing slip) hide every direct child of <body>
+   except <main> — the announcement marquee, header, footer, WhatsApp/chat/cart
+   widgets, etc. are all siblings of <main> in the root layout — even on screen,
+   not just when printing. A business document shouldn't sit under a Shop/Cart
+   navigation bar. Scoped via :has() to only pages carrying the .print-doc-page
+   marker, so every other route on the site is unaffected. */
+body:has(.print-doc-page) > :not(main) {
+  display: none;
+}
+body:has(.print-doc-page) main {
+  padding: 0;
+  min-height: 0;
+}
+
+@media print {
+  header, footer, .fixed, .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    /* <main> carries a min-h-screen floor on screen (it keeps the footer below
+       the fold while a long page streams, which otherwise costs CLS). That floor
+       is meaningless on paper and risks padding a short invoice toward an extra
+       sheet, so drop it when printing. */
+    min-height: 0 !important;
+  }
+  body {
+    background: white;
+  }
+}

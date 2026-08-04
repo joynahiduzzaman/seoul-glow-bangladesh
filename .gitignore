@@ -1,0 +1,21 @@
+node_modules
+.next
+out
+build
+dist
+.env
+.env.local
+.env*.local
+*.db
+*.db-journal
+dev.db
+prisma/dev.db
+.DS_Store
+npm-debug.log*
+
+# Admin-uploaded product images — user-generated content, not source. The folder
+# structure is preserved via public/uploads/products/.gitkeep.
+public/uploads/*
+!public/uploads/products
+public/uploads/products/*
+!public/uploads/products/.gitkeep

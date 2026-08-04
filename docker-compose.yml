@@ -1,0 +1,33 @@
+version: "3.9"
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "mysql://seoulglow:seoulglow@db:3306/seoulglow"
+      JWT_SECRET: "change-this-to-a-long-random-string"
+      JWT_REFRESH_SECRET: "change-this-to-a-different-long-random-string"
+      NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
+      SMTP_HOST: ""
+      SMTP_PORT: "587"
+      SMTP_USER: ""
+      SMTP_PASSWORD: ""
+      AFFILIATE_COMMISSION_PERCENT: "10"
+      CRON_SECRET: "change-this-to-a-long-random-string"
+    depends_on:
+      - db
+  db:
+    image: mysql:8
+    restart: always
+    environment:
+      MYSQL_DATABASE: seoulglow
+      MYSQL_USER: seoulglow
+      MYSQL_PASSWORD: seoulglow
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+volumes:
+  db_data:
