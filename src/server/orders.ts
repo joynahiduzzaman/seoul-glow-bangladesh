@@ -209,7 +209,12 @@ export async function finalizeOrderEffects(
 
   const recipientEmail = fullUser?.email || order.guestEmail;
   if (recipientEmail) {
-    sendOrderConfirmationEmail(recipientEmail, {
+    // Awaited on purpose. This used to be fire-and-forget, which is unsafe on
+    // serverless: once the response is returned the execution context can be
+    // frozen or torn down, so an in-flight request to the mail provider may
+    // simply never complete. The extra couple of hundred milliseconds on
+    // checkout buys an order confirmation that actually gets sent.
+    const result = await sendOrderConfirmationEmail(recipientEmail, {
       orderNumber: order.orderNumber,
       customerName,
       items: verifiedItems.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })),
@@ -218,7 +223,27 @@ export async function finalizeOrderEffects(
       shippingFee: order.shippingFee,
       total: order.total,
       paymentMethod: order.paymentMethod,
-    }).catch(() => {});
+    }).catch((err) => ({ sent: false, error: err }));
+
+    // Record the outcome on the order itself. The previous `.catch(() => {})`
+    // discarded every failure, so a rejected send left no trace anywhere — which
+    // is exactly how order SGB260805-8994 appeared to succeed while the customer
+    // received nothing. An admin can now see it on the order timeline.
+    if (result.sent) {
+      await logOrderEvent(order.id, "NOTE", `Order confirmation emailed to ${recipientEmail}`, "system");
+    } else {
+      const reason =
+        (result.error as { message?: string })?.message ?? String(result.error ?? "unknown error");
+      console.error(`[order ${order.orderNumber}] confirmation email failed:`, reason);
+      await logOrderEvent(
+        order.id,
+        "NOTE",
+        `Order confirmation email FAILED to ${recipientEmail}: ${reason.slice(0, 300)}`,
+        "system"
+      );
+    }
+  } else {
+    await logOrderEvent(order.id, "NOTE", "No email address on this order — no confirmation sent.", "system");
   }
 
   if (order.userId) {
