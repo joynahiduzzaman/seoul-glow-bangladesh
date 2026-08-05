@@ -154,6 +154,29 @@ export async function handleOAuthCallback(req: NextRequest, provider: OAuthProvi
     return NextResponse.redirect(url);
   };
 
+  // Providers report refusals by redirecting back with ?error=..., not by
+  // omitting the code. Without this branch every such case fell through to the
+  // generic "interrupted or expired" message below — so a user who simply
+  // pressed Cancel, and an app whose redirect URI is unregistered, produced
+  // identical and equally unhelpful text.
+  const providerError = req.nextUrl.searchParams.get("error");
+  if (providerError) {
+    const label = provider === "google" ? "Google" : "Facebook";
+    const description = req.nextUrl.searchParams.get("error_description");
+    console.error(`${provider} OAuth refused:`, providerError, description ?? "");
+
+    if (providerError === "access_denied") {
+      return loginUrl(`You cancelled ${label} sign-in. You can try again or sign in with email.`);
+    }
+    if (providerError === "redirect_uri_mismatch") {
+      return loginUrl(
+        `${label} rejected the sign-in because this site's callback URL is not registered. ` +
+          `Add ${redirectUri(req, provider)} to the app's authorised redirect URIs.`
+      );
+    }
+    return loginUrl(`${label} sign-in failed: ${description || providerError}`);
+  }
+
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state");
   const expectedState = req.cookies.get(STATE_COOKIE)?.value;
