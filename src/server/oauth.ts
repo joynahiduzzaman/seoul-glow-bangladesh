@@ -13,6 +13,7 @@ import { prisma } from "./db";
 import { signAccessToken, signRefreshToken, setAuthCookies, isRequestSecure } from "./auth";
 import { linkGuestOrdersToAccount } from "./orders";
 import { generateReferralCode, safeRedirectPath } from "@/lib/utils";
+import { SOCIAL_LOGIN_ENABLED } from "@/lib/auth-providers";
 
 export type OAuthProvider = "google" | "facebook";
 
@@ -147,6 +148,20 @@ export function startOAuthFlow(req: NextRequest, provider: OAuthProvider) {
   // once the signed-in user's role is known (customer vs staff land in different
   // default places). Only a genuine explicit redirect gets stored.
   const next = safeRedirectPath(req.nextUrl.searchParams.get("redirect"));
+
+  // A provider hidden from the UI must also refuse a direct hit: bookmarks and
+  // cached pages outlive a button, and sending someone to a provider that will
+  // reject them is worse than saying so here. Credentials and routes are
+  // untouched — see src/lib/auth-providers.ts for the switch.
+  if (!SOCIAL_LOGIN_ENABLED[provider]) {
+    const label = provider === "google" ? "Google" : "Facebook";
+    const loginUrl = new URL("/login", origin);
+    loginUrl.searchParams.set(
+      "oauthError",
+      `${label} sign-in is temporarily unavailable. Please sign in with your email and password.`
+    );
+    return NextResponse.redirect(loginUrl);
+  }
 
   if (!isConfigured(provider)) {
     const label = provider === "google" ? "Google" : "Facebook";

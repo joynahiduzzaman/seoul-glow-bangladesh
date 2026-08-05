@@ -44,8 +44,8 @@ const config: Config = {
         // over cream: sale 3.42, today 2.81, new 3.33 — all below 4.5). Same hue
         // and saturation, lightness reduced only as far as needed. The originals
         // stay in use for solid fills and for BadgeStamp over photography.
-        "badge-sale-text": "#EB0027",
-        "badge-today-text": "#C25100",
+        "badge-sale-text": "#CC0022",
+        "badge-today-text": "#AA4700",
         "badge-new-text": "#0C835B",
         "badge-best": "#1A1A1A",
         "badge-sale": "#FF3B5C",

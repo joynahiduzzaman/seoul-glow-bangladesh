@@ -67,38 +67,38 @@ export default async function Footer({ locale, dict }: { locale: Locale; dict: D
         <div>
           <h4 className="font-display text-lg mb-4">{dict.footer.shop}</h4>
           <ul className="space-y-2.5 text-sm text-cream/60">
-            <li><Link href="/shop" className="hover:text-cream transition-colors">All Products</Link></li>
-            <li><Link href="/shop?filter=bestseller" className="hover:text-cream transition-colors">Best Sellers</Link></li>
-            <li><Link href="/shop?filter=new" className="hover:text-cream transition-colors">New Arrivals</Link></li>
-            <li><Link href="/shop?filter=flashsale" className="hover:text-cream transition-colors">Flash Sale</Link></li>
-            <li><Link href="/shop?view=brands" className="hover:text-cream transition-colors">All Brands</Link></li>
+            <li><Link href="/shop" className="link-tap hover:text-cream transition-colors">All Products</Link></li>
+            <li><Link href="/shop?filter=bestseller" className="link-tap hover:text-cream transition-colors">Best Sellers</Link></li>
+            <li><Link href="/shop?filter=new" className="link-tap hover:text-cream transition-colors">New Arrivals</Link></li>
+            <li><Link href="/shop?filter=flashsale" className="link-tap hover:text-cream transition-colors">Flash Sale</Link></li>
+            <li><Link href="/shop?view=brands" className="link-tap hover:text-cream transition-colors">All Brands</Link></li>
           </ul>
         </div>
 
         <div>
           <h4 className="font-display text-lg mb-4">{dict.footer.company}</h4>
           <ul className="space-y-2.5 text-sm text-cream/60">
-            <li><Link href="/about" className="hover:text-cream transition-colors">About Us</Link></li>
-            <li><Link href="/contact" className="hover:text-cream transition-colors">Contact</Link></li>
-            <li><Link href="/blog" className="hover:text-cream transition-colors">Blog</Link></li>
+            <li><Link href="/about" className="link-tap hover:text-cream transition-colors">About Us</Link></li>
+            <li><Link href="/contact" className="link-tap hover:text-cream transition-colors">Contact</Link></li>
+            <li><Link href="/blog" className="link-tap hover:text-cream transition-colors">Blog</Link></li>
             {/* Affiliate Program link intentionally removed — program is disabled for
-                now. Re-add to re-enable: <li><Link href="/affiliate" className="hover:text-cream transition-colors">Affiliate Program</Link></li> */}
-            <li><Link href="/authenticity" className="hover:text-cream transition-colors">Authenticity Guarantee</Link></li>
+                now. Re-add to re-enable: <li><Link href="/affiliate" className="link-tap hover:text-cream transition-colors">Affiliate Program</Link></li> */}
+            <li><Link href="/authenticity" className="link-tap hover:text-cream transition-colors">Authenticity Guarantee</Link></li>
           </ul>
         </div>
 
         <div>
           <h4 className="font-display text-lg mb-4">{dict.footer.support}</h4>
           <ul className="space-y-2.5 text-sm text-cream/60">
-            <li><Link href="/faq" className="hover:text-cream transition-colors">FAQ</Link></li>
-            <li><Link href="/track-order" className="hover:text-cream transition-colors">Track Order</Link></li>
-            <li><Link href="/shipping-policy" className="hover:text-cream transition-colors">Shipping Policy</Link></li>
-            <li><Link href="/refund-policy" className="hover:text-cream transition-colors">Refund Policy</Link></li>
-            <li><Link href="/privacy-policy" className="hover:text-cream transition-colors">Privacy Policy</Link></li>
-            <li><Link href="/terms" className="hover:text-cream transition-colors">Terms & Conditions</Link></li>
+            <li><Link href="/faq" className="link-tap hover:text-cream transition-colors">FAQ</Link></li>
+            <li><Link href="/track-order" className="link-tap hover:text-cream transition-colors">Track Order</Link></li>
+            <li><Link href="/shipping-policy" className="link-tap hover:text-cream transition-colors">Shipping Policy</Link></li>
+            <li><Link href="/refund-policy" className="link-tap hover:text-cream transition-colors">Refund Policy</Link></li>
+            <li><Link href="/privacy-policy" className="link-tap hover:text-cream transition-colors">Privacy Policy</Link></li>
+            <li><Link href="/terms" className="link-tap hover:text-cream transition-colors">Terms & Conditions</Link></li>
           </ul>
           <div className="mt-6 space-y-2 text-xs text-cream/55">
-            <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-cream transition-colors">
+            <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[24px] items-center gap-2 hover:text-cream transition-colors">
               <MessageCircle size={13} className="shrink-0" /> +{whatsappNumber}
             </a>
             <p className="flex items-start gap-2"><MapPin size={13} className="shrink-0 mt-0.5" /> {business.addressShort}</p>
@@ -111,7 +111,7 @@ export default async function Footer({ locale, dict }: { locale: Locale; dict: D
           <NewsletterFooterForm dict={dict} />
 
           <div className="mt-8">
-            <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-cream/55 hover:text-cream transition-colors mb-3 block">
+            <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="link-tap text-xs text-cream/55 hover:text-cream transition-colors mb-3">
               Follow @{business.instagramHandle}
             </a>
             <div className="grid grid-cols-4 gap-1.5">

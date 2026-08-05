@@ -23,7 +23,7 @@ export default function BlogPage({ searchParams }: { searchParams: { category?: 
       <div className="container-px mx-auto section-py text-center">
         <h1 className="section-title mb-4">Skincare Journal</h1>
         <p className="text-body text-sm mb-6">No articles in this category yet.</p>
-        <Link href="/blog" className="text-sm text-rose-gold-text hover:underline">← View all articles</Link>
+        <Link href="/blog" className="link-tap text-sm text-rose-gold-text hover:underline">← View all articles</Link>
       </div>
     );
   }

@@ -39,7 +39,7 @@ export default function BlogPreviewSection({
           <h2 className="section-title">{title || "Latest From the Journal"}</h2>
         </div>
         {showViewAll && (
-          <Link href={viewAllUrl || "/blog"} className="text-sm text-rose-gold-text hover:underline shrink-0">
+          <Link href={viewAllUrl || "/blog"} className="link-tap text-sm text-rose-gold-text hover:underline shrink-0">
             {viewAllText || "View all →"}
           </Link>
         )}

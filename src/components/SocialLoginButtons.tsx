@@ -1,4 +1,5 @@
 import { Dictionary } from "@/lib/i18n/dictionaries";
+import { enabledSocialProviders } from "@/lib/auth-providers";
 
 function GoogleIcon() {
   return (
@@ -19,8 +20,19 @@ function FacebookIcon() {
   );
 }
 
+const PROVIDER_UI = {
+  google: { label: "Google", Icon: GoogleIcon },
+  facebook: { label: "Facebook", Icon: FacebookIcon },
+} as const;
+
 export default function SocialLoginButtons({ dict, redirectTo }: { dict: Dictionary; redirectTo?: string }) {
   const suffix = redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : "";
+  const providers = enabledSocialProviders();
+
+  // With every provider switched off the divider would introduce an empty
+  // section captioned "or continue with", which reads as something failing to
+  // load rather than a deliberate absence.
+  if (providers.length === 0) return null;
 
   return (
     <div className="mt-8">
@@ -29,19 +41,21 @@ export default function SocialLoginButtons({ dict, redirectTo }: { dict: Diction
         <span className="text-xs text-ink/70 shrink-0">{dict.auth.orContinueWith}</span>
         <div className="h-px flex-1 bg-border-soft" />
       </div>
-      <div className="grid grid-cols-2 gap-3 mt-5">
-        <a
-          href={`/api/auth/google${suffix}`}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-soft bg-white px-4 py-3 text-sm font-medium text-ink/80 shadow-e1 transition-all duration-300 ease-silk hover:border-ink/20 hover:shadow-e2 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
-        >
-          <GoogleIcon /> Google
-        </a>
-        <a
-          href={`/api/auth/facebook${suffix}`}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-soft bg-white px-4 py-3 text-sm font-medium text-ink/80 shadow-e1 transition-all duration-300 ease-silk hover:border-ink/20 hover:shadow-e2 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
-        >
-          <FacebookIcon /> Facebook
-        </a>
+      {/* A lone provider spans the full width rather than sitting in half a
+          two-column grid with a gap beside it. */}
+      <div className={`mt-5 grid gap-3 ${providers.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+        {providers.map((provider) => {
+          const { label, Icon } = PROVIDER_UI[provider];
+          return (
+            <a
+              key={provider}
+              href={`/api/auth/${provider}${suffix}`}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-soft bg-white px-4 py-3 text-sm font-medium text-ink/80 shadow-e1 transition-all duration-300 ease-silk hover:border-ink/20 hover:shadow-e2 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+            >
+              <Icon /> {label}
+            </a>
+          );
+        })}
       </div>
     </div>
   );

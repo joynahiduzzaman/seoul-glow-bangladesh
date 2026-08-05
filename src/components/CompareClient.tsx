@@ -170,7 +170,7 @@ export default function CompareClient() {
       {products.length < 2 && (
         <div className="max-w-lg mx-auto text-center mb-10 rounded-xl2 bg-gold/[0.08] border border-gold/20 p-5">
           <p className="text-sm text-ink/70">Add at least one more product to see a side-by-side comparison.</p>
-          <Link href="/shop" className="text-sm text-rose-gold-text hover:underline mt-2 inline-block">Keep Browsing →</Link>
+          <Link href="/shop" className="link-tap text-sm text-rose-gold-text hover:underline mt-2 inline-block">Keep Browsing →</Link>
         </div>
       )}
 

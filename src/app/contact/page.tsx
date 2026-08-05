@@ -101,7 +101,7 @@ export default async function ContactPage() {
           <FaqAccordion items={faqs} />
         </ScrollReveal>
         <p className="text-center mt-8">
-          <Link href="/faq" className="text-sm text-rose-gold-text hover:underline inline-flex items-center gap-1.5">
+          <Link href="/faq" className="link-tap text-sm text-rose-gold-text hover:underline inline-flex items-center gap-1.5">
             See all FAQs <ArrowRight size={14} />
           </Link>
         </p>

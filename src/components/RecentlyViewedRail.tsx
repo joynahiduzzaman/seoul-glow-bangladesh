@@ -34,7 +34,7 @@ export default function RecentlyViewedRail({
       <div className="text-center py-10">
         <Eye size={22} className="text-ink/20 mx-auto mb-3" />
         <p className="text-sm text-ink/70 mb-4">Products you view will show up here.</p>
-        <Link href="/shop" className="text-sm text-rose-gold-text hover:underline">Start Browsing</Link>
+        <Link href="/shop" className="link-tap text-sm text-rose-gold-text hover:underline">Start Browsing</Link>
       </div>
     );
   }

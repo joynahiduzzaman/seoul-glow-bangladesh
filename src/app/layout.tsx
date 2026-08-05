@@ -46,6 +46,12 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  // The site answers on its Vercel deployment host as well as the custom domain,
+  // so without an explicit canonical both can be indexed and the ranking signals
+  // for a page split across two URLs. "./" is resolved by Next against
+  // metadataBase *and the current pathname*, giving every route its own correct
+  // canonical rather than pointing the whole site at the homepage.
+  alternates: { canonical: "./" },
   title: {
     default: "Seoul Glow Bangladesh | Authentic Korean Skincare",
     template: "%s | Seoul Glow Bangladesh",

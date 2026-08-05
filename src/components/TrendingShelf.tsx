@@ -31,7 +31,7 @@ export default function TrendingShelf({
           <h2 className="section-title">{title || dict.home.trending}</h2>
         </div>
         {showViewAll && (
-          <Link href={viewAllUrl || "/shop?filter=trending"} className="text-sm text-rose-gold-text hover:underline">
+          <Link href={viewAllUrl || "/shop?filter=trending"} className="link-tap text-sm text-rose-gold-text hover:underline">
             {viewAllText || dict.home.viewAll}
           </Link>
         )}

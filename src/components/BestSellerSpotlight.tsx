@@ -39,7 +39,7 @@ export default function BestSellerSpotlight({
             <h2 className="section-title">{title || dict.home.bestSellers}</h2>
           </div>
           {showViewAll && (
-            <Link href={viewAllUrl || "/shop?filter=bestseller"} className="text-sm text-rose-gold-text hover:underline">
+            <Link href={viewAllUrl || "/shop?filter=bestseller"} className="link-tap text-sm text-rose-gold-text hover:underline">
               {viewAllText || dict.home.viewAll}
             </Link>
           )}

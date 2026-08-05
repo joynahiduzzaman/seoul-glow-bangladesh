@@ -37,7 +37,7 @@ export default function ContactForm() {
         <p className="text-sm text-body max-w-xs mx-auto">
           Thanks for reaching out — our team typically replies within a few hours during business hours.
         </p>
-        <button onClick={() => setSent(false)} className="text-sm text-rose-gold-text hover:underline mt-6">
+        <button onClick={() => setSent(false)} className="link-tap text-sm text-rose-gold-text hover:underline mt-6">
           Send another message
         </button>
       </div>

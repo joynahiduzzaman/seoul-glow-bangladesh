@@ -53,7 +53,7 @@ export default function CategoryGrid({
           <p className="text-xs uppercase tracking-[0.2em] text-gold-text font-semibold mb-3">{subtitle || "Shop the Routine"}</p>
           <h2 className="section-title">{title || dict.home.shopByCategory}</h2>
         </div>
-        <Link href="/shop" className="text-sm text-rose-gold-text hover:underline shrink-0">{dict.home.viewAll}</Link>
+        <Link href="/shop" className="link-tap text-sm text-rose-gold-text hover:underline shrink-0">{dict.home.viewAll}</Link>
       </div>
 
       {/* Elegant rounded-square editorial cards — real photography, soft shadow, hover lift. */}
