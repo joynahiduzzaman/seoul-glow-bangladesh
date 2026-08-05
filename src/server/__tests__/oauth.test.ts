@@ -72,7 +72,10 @@ describe("buildAuthorizeUrl", () => {
     expect(url.origin + url.pathname).toBe("https://www.facebook.com/v19.0/dialog/oauth");
     expect(url.searchParams.get("client_id")).toBe("fb-id-456");
     expect(url.searchParams.get("redirect_uri")).toBe("https://seoulglow.com.bd/api/auth/facebook/callback");
-    expect(url.searchParams.get("scope")).toBe("email public_profile");
+    // Comma separated, per Meta's /dialog/oauth contract. This previously
+    // asserted the space-separated form, which is what shipped the
+    // "Invalid Scopes: email" failure to production — the test encoded the bug.
+    expect(url.searchParams.get("scope")).toBe("public_profile,email");
     expect(url.searchParams.get("state")).toBe("state-xyz");
   });
 
@@ -148,5 +151,48 @@ describe("fetchProfile — token exchange + profile parsing", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "tok" }) })
       .mockResolvedValueOnce({ ok: false }) as any;
     await expect(fetchProfile(fakeReq as any, "facebook", "code")).rejects.toThrow("Facebook profile fetch failed");
+  });
+});
+
+/**
+ * The two providers disagree about how a scope list is delimited, and the
+ * mistake is invisible until a real sign-in fails. Facebook's /dialog/oauth
+ * takes a COMMA separated list; sending the OAuth 2.0 standard space separation
+ * made Meta read the whole string as one permission and reject it with
+ * "Invalid Scopes: email". Google, correctly, wants spaces.
+ *
+ * These assertions exist so that making the two branches "consistent" fails
+ * loudly rather than silently breaking Facebook sign-in again.
+ */
+describe("authorize URL scope formatting differs per provider", () => {
+  beforeEach(() => {
+    process.env.GOOGLE_CLIENT_ID = "g-id";
+    process.env.GOOGLE_CLIENT_SECRET = "g-secret";
+    process.env.FACEBOOK_CLIENT_ID = "f-id";
+    process.env.FACEBOOK_CLIENT_SECRET = "f-secret";
+  });
+
+  it("Facebook requests public_profile and email comma separated", () => {
+    const url = new URL(buildAuthorizeUrl(fakeReq, "facebook", "state123"));
+    const scope = url.searchParams.get("scope");
+
+    expect(scope).toBe("public_profile,email");
+    expect(scope).not.toContain(" ");
+    expect(scope!.split(",")).toEqual(expect.arrayContaining(["email", "public_profile"]));
+  });
+
+  it("Google keeps the spec's space separation", () => {
+    const url = new URL(buildAuthorizeUrl(fakeReq, "google", "state123"));
+    const scope = url.searchParams.get("scope");
+
+    expect(scope).toBe("openid email profile");
+    expect(scope).not.toContain(",");
+  });
+
+  it("Facebook hits the versioned dialog endpoint", () => {
+    const url = new URL(buildAuthorizeUrl(fakeReq, "facebook", "s"));
+    expect(url.origin + url.pathname).toBe("https://www.facebook.com/v19.0/dialog/oauth");
+    expect(url.searchParams.get("response_type")).toBe("code");
+    expect(url.searchParams.get("state")).toBe("s");
   });
 });

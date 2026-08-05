@@ -54,11 +54,16 @@ export function buildAuthorizeUrl(
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
 
+  // Facebook's scope list is COMMA separated, unlike the space separation the
+  // OAuth 2.0 spec uses and Google expects. Sending "email public_profile" made
+  // Meta read the whole string as one permission name and reject the request
+  // with "Invalid Scopes: email". Do not "tidy" this to match the Google branch
+  // above — the two providers genuinely differ here.
   const params = new URLSearchParams({
     client_id: process.env.FACEBOOK_CLIENT_ID || "",
     redirect_uri,
     response_type: "code",
-    scope: "email public_profile",
+    scope: "public_profile,email",
     state,
   });
   return `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`;
@@ -105,10 +110,24 @@ export async function fetchProfile(
   if (!tokenRes.ok) throw new Error("Facebook token exchange failed");
   const tokens = await tokenRes.json();
 
+  // Pinned to the same version as the dialog and token endpoints. An unversioned
+  // /me resolves to the oldest version Meta still serves, so the response shape
+  // can change under the app without any code change here.
   const profileRes = await fetch(
-    `https://graph.facebook.com/me?fields=id,name,email&access_token=${encodeURIComponent(tokens.access_token)}`
+    `https://graph.facebook.com/v19.0/me?fields=id,name,email&access_token=${encodeURIComponent(tokens.access_token)}`
   );
-  if (!profileRes.ok) throw new Error("Facebook profile fetch failed");
+  if (!profileRes.ok) {
+    // Read the body defensively: this path exists to explain a failure, so it
+    // must not itself throw and replace Meta's reason with a TypeError.
+    let detail = "";
+    try {
+      if (typeof profileRes.text === "function") detail = await profileRes.text();
+    } catch {
+      /* body already consumed or unreadable — the status alone still helps */
+    }
+    console.error("Facebook profile fetch failed:", profileRes.status, detail.slice(0, 200));
+    throw new Error("Facebook profile fetch failed");
+  }
   const profile = await profileRes.json();
   return { oauthId: profile.id, email: profile.email ?? null, name: profile.name || "Facebook User" };
 }
