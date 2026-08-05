@@ -52,6 +52,12 @@ export const metadata: Metadata = {
   // metadataBase *and the current pathname*, giving every route its own correct
   // canonical rather than pointing the whole site at the homepage.
   alternates: { canonical: "./" },
+  // Google Search Console ownership proof. Emitted by Next as
+  // <meta name="google-site-verification" ...> in <head> on every route, which
+  // is what Search Console wants — it re-checks the tag periodically, so this
+  // has to stay put rather than being removed once verification passes.
+  // The token identifies the property, not an account; it is not a secret.
+  verification: { google: "qTSpesTOONprGjQNzIf_wQR_ogu34q3k6mnJ8LD3dIg" },
   title: {
     default: "Seoul Glow Bangladesh | Authentic Korean Skincare",
     template: "%s | Seoul Glow Bangladesh",
