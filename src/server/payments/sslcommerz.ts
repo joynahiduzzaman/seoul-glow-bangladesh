@@ -43,7 +43,7 @@ export const sslcommerzProvider: PaymentProvider = {
         fail_url: `${params.callbackBaseUrl}/api/payments/sslcommerz/callback?status=fail`,
         cancel_url: `${params.callbackBaseUrl}/api/payments/sslcommerz/callback?status=cancel`,
         cus_name: params.customerName,
-        cus_email: params.customerEmail || "guest@seoulglow.com.bd",
+        cus_email: params.customerEmail || "guest@seoulglowbangladesh.com",
         cus_phone: params.customerPhone,
         cus_add1: "Dhaka",
         cus_city: "Dhaka",

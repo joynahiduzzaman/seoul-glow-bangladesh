@@ -52,7 +52,7 @@ export const shurjopayProvider: PaymentProvider = {
           amount: params.amount,
           customer_name: params.customerName,
           customer_phone: params.customerPhone,
-          customer_email: params.customerEmail || "guest@seoulglow.com.bd",
+          customer_email: params.customerEmail || "guest@seoulglowbangladesh.com",
           customer_address: "Dhaka",
           customer_city: "Dhaka",
           client_ip: "127.0.0.1",
