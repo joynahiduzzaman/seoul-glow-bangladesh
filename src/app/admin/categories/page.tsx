@@ -18,6 +18,9 @@ export default async function AdminCategoriesPage() {
         slug: c.slug,
         image: c.image,
         productCount: c._count.products,
+        // Serialised here rather than passing a Date: this crosses the
+        // server/client boundary, and the manager only ever formats it.
+        createdAt: c.createdAt.toISOString(),
       }))}
     />
   );

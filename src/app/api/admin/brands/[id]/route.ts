@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/server/auth";
 import { toSlug, uniqueSlug, blockingProductCount } from "@/server/taxonomy";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { deleteImageByUrl } from "@/server/uploads/cloudinary";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -33,6 +34,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const data: Record<string, unknown> = {};
   if (parsed.data.name !== undefined) data.name = parsed.data.name;
   if (parsed.data.logo !== undefined) data.logo = parsed.data.logo || null;
+
+  // Replacing or clearing the logo leaves the previous Cloudinary asset
+  // orphaned — still billed for, no longer referenced by anything. Capture the
+  // old URL now, and delete it only once the update has actually succeeded.
+  const previousImage =
+    parsed.data.logo !== undefined && existing.logo !== (parsed.data.logo || null)
+      ? existing.logo
+      : null;
+
   if (parsed.data.banner !== undefined) data.banner = parsed.data.banner || null;
   if (parsed.data.story !== undefined) data.story = parsed.data.story || null;
   if (parsed.data.country !== undefined) data.country = parsed.data.country;
@@ -43,6 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const brand = await prisma.brand.update({ where: { id: params.id }, data });
+  if (previousImage) await deleteImageByUrl(previousImage);
   revalidatePath("/");
   revalidatePath("/shop");
   return NextResponse.json({ brand });
@@ -62,13 +73,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (inUse > 0) {
     return NextResponse.json(
       {
-        error: `${inUse} product${inUse === 1 ? "" : "s"} still use this brand. Move them to another brand first, then delete it.`,
+        error: `${inUse} product${inUse === 1 ? " still uses" : "s still use"} this brand. Move ${inUse === 1 ? "it" : "them"} to another brand first, then delete it.`,
         productCount: inUse,
       },
       { status: 409 }
     );
   }
 
+  await deleteImageByUrl(existing.logo);
   await prisma.brand.delete({ where: { id: params.id } });
   revalidatePath("/");
   revalidatePath("/shop");

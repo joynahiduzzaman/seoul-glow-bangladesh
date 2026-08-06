@@ -18,7 +18,11 @@ export default async function AdminBrandsPage() {
         slug: b.slug,
         // The manager shows one image; for a brand that is its logo.
         image: b.logo,
+        // Brand.story is the existing description column — no schema change needed.
+        description: b.story,
+        country: b.country,
         productCount: b._count.products,
+        createdAt: b.createdAt.toISOString(),
       }))}
     />
   );

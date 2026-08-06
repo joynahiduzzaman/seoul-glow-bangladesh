@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/server/auth";
 import { toSlug, uniqueSlug, blockingProductCount } from "@/server/taxonomy";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { deleteImageByUrl } from "@/server/uploads/cloudinary";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -30,6 +31,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const data: Record<string, unknown> = {};
   if (parsed.data.name !== undefined) data.name = parsed.data.name;
   if (parsed.data.image !== undefined) data.image = parsed.data.image || null;
+
+  // Replacing or clearing an image leaves the previous Cloudinary asset
+  // orphaned — still billed for, no longer referenced by anything. Capture the
+  // old URL now, and delete it only once the update has actually succeeded.
+  const previousImage =
+    parsed.data.image !== undefined && existing.image !== (parsed.data.image || null)
+      ? existing.image
+      : null;
+
   // Renaming does not silently move the public URL — the slug only changes when
   // it is edited directly, so existing links and any SEO on them survive.
   if (parsed.data.slug !== undefined) {
@@ -37,6 +47,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const category = await prisma.category.update({ where: { id: params.id }, data });
+  if (previousImage) await deleteImageByUrl(previousImage);
   revalidatePath("/");
   revalidatePath("/shop");
   return NextResponse.json({ category });
@@ -56,13 +67,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (inUse > 0) {
     return NextResponse.json(
       {
-        error: `${inUse} product${inUse === 1 ? "" : "s"} still use this category. Move them to another category first, then delete it.`,
+        error: `${inUse} product${inUse === 1 ? " still uses" : "s still use"} this category. Move ${inUse === 1 ? "it" : "them"} to another category first, then delete it.`,
         productCount: inUse,
       },
       { status: 409 }
     );
   }
 
+  await deleteImageByUrl(existing.image);
   await prisma.category.delete({ where: { id: params.id } });
   revalidatePath("/");
   revalidatePath("/shop");

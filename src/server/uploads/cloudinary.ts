@@ -94,3 +94,36 @@ export async function deleteImage(publicId: string): Promise<void> {
   configure();
   await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
 }
+
+/**
+ * Recovers the Cloudinary public id from a delivery URL.
+ *
+ * Only the URL is stored against a category or brand, so replacing an image
+ * would otherwise orphan the old asset in Cloudinary forever — billed for,
+ * unreferenced, and invisible. Returns null for anything that is not a
+ * Cloudinary URL (seed data still points at Unsplash), so callers can safely
+ * pass whatever was previously stored.
+ *
+ * Format: https://res.cloudinary.com/<cloud>/image/upload/v<version>/<path>.<ext>
+ */
+export function publicIdFromUrl(url: string | null | undefined): string | null {
+  if (!url || !url.includes("res.cloudinary.com")) return null;
+  const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z0-9]+)?$/i);
+  return match?.[1] ?? null;
+}
+
+/**
+ * Deletes the asset behind a stored URL, if it is one of ours.
+ *
+ * Never throws: an image that outlives its record is untidy, whereas a failed
+ * save because cleanup failed is a broken feature. Failures are logged.
+ */
+export async function deleteImageByUrl(url: string | null | undefined): Promise<void> {
+  const publicId = publicIdFromUrl(url);
+  if (!publicId || !isCloudinaryConfigured()) return;
+  try {
+    await deleteImage(publicId);
+  } catch (err) {
+    console.error(`[cloudinary] could not delete ${publicId}:`, err);
+  }
+}
