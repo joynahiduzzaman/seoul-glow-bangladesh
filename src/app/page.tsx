@@ -20,7 +20,7 @@ import WhyChooseUsEditorial from "@/components/WhyChooseUsEditorial";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import RecentlyViewedRail from "@/components/RecentlyViewedRail";
 import BlogPreviewSection from "@/components/BlogPreviewSection";
-import InstagramSection, { InstagramSkeleton } from "@/components/InstagramSection";
+import InstagramSection from "@/components/InstagramSection";
 import Newsletter from "@/components/Newsletter";
 import CustomBanner from "@/components/CustomBanner";
 
@@ -272,7 +272,6 @@ async function renderSection(section: { sectionKey: string; settings: string }, 
         <BlogPreviewSection
           title={settings.title}
           subtitle={settings.subtitle}
-          postLimit={settings.postLimit || 3}
           mode={settings.mode || "auto"}
           postSlugs={settings.postSlugs || []}
           showViewAll={settings.showViewAll !== false}
@@ -282,19 +281,13 @@ async function renderSection(section: { sectionKey: string; settings: string }, 
         />
       );
     case "instagram":
-      // Suspense so a cold Instagram cache cannot hold up the whole homepage:
-      // every other section renders immediately and this one streams in behind
-      // a skeleton. The fetch revalidates hourly, so that is rare in practice.
       return (
-        <Suspense fallback={<InstagramSkeleton postLimit={settings.postLimit || 6} backgroundColor={bg} />}>
-          <InstagramSection
-            title={settings.title}
-            subtitle={settings.subtitle}
-            handle={settings.handle}
-            postLimit={settings.postLimit || 6}
-            backgroundColor={bg}
-          />
-        </Suspense>
+        <InstagramSection
+          title={settings.title}
+          subtitle={settings.subtitle}
+          handle={settings.handle}
+          backgroundColor={bg}
+        />
       );
     case "newsletter":
       return (

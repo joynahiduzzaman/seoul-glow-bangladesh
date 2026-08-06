@@ -12,7 +12,8 @@ import {
   Boxes,
   LayoutTemplate,
   FileText,
-  Instagram,
+  FolderTree,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 
@@ -29,7 +30,8 @@ const ICONS: Record<string, LucideIcon> = {
   inventory: Boxes,
   homepage: LayoutTemplate,
   content: FileText,
-  instagram: Instagram,
+  categories: FolderTree,
+  brands: Sparkles,
 };
 
 interface NavItem {

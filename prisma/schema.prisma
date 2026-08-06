@@ -531,26 +531,3 @@ model NewsletterSubscriber {
   createdAt DateTime @default(now())
 }
 
-/// Manually curated Instagram posts shown on the homepage.
-///
-/// The Graph API is unavailable while the Meta developer account is under
-/// identity verification (and its predecessor, the Basic Display API, was shut
-/// down in December 2024). Rather than leave the section empty, posts are
-/// entered by hand here. src/server/instagram.ts keeps a single interface over
-/// both sources, so switching to the API later needs no frontend change.
-model InstagramPost {
-  id           String   @id @default(cuid())
-  /// Thumbnail shown in the grid — a Cloudinary URL from the admin uploader.
-  imageUrl     String
-  /// Permalink to the original post; the grid tile links here.
-  postUrl      String
-  /// Optional; used as the tile's accessible name when present.
-  caption      String?
-  displayOrder Int      @default(0)
-  enabled      Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  /// The homepage query filters on enabled and sorts by displayOrder.
-  @@index([enabled, displayOrder])
-}

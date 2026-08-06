@@ -500,20 +500,15 @@ export default function SectionSettingsModal({
 
               {section.sectionKey === "instagram" && (
                 <div className="border-t border-border-soft pt-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-ink/70 mb-1.5">Instagram handle</label>
-                      <input placeholder="seoulglowbangladesh" value={draft.settings.handle || ""} onChange={(e) => set("handle", e.target.value)} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-ink/70 mb-1.5">Posts to show</label>
-                      <input type="number" min={4} max={8} value={draft.settings.postLimit ?? 6} onChange={(e) => set("postLimit", Number(e.target.value))} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
-                    </div>
+                  <div>
+                    <label className="block text-[11px] text-ink/70 mb-1.5">Instagram handle</label>
+                    <input placeholder="seoulglowbangladesh" value={draft.settings.handle || ""} onChange={(e) => set("handle", e.target.value)} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
                   </div>
+                  {/* No post-count control: this section is a single link to the
+                      profile, so there is nothing to count. */}
                   <p className="rounded-lg bg-beige/60 px-4 py-3 text-[11px] leading-relaxed text-ink/70">
-                    Posts are pulled live from your Instagram account, so there is nothing to
-                    upload here. If the feed is unavailable the section shows a link to your
-                    profile instead of placeholder images.
+                    This section links to your Instagram profile — there is no photo grid to
+                    configure. Edit the heading and subtitle above to change what it says.
                   </p>
                 </div>
               )}

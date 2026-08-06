@@ -222,7 +222,6 @@ export default function PreviewFramePage() {
           <BlogPreviewSection
             title={settings.title}
             subtitle={settings.subtitle}
-            postLimit={settings.postLimit || 3}
             mode={settings.mode || "auto"}
             postSlugs={settings.postSlugs || []}
             showViewAll={settings.showViewAll !== false}
@@ -237,7 +236,6 @@ export default function PreviewFramePage() {
             title={settings.title}
             subtitle={settings.subtitle}
             handle={settings.handle}
-            postLimit={settings.postLimit || 6}
             backgroundColor={bg}
           />
         );
