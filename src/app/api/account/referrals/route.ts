@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db";
 import { getCurrentUser } from "@/server/auth";
+import { payableCommissionWhere } from "@/server/commissions";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -8,7 +9,7 @@ export async function GET() {
 
   const [referredUsers, commissions] = await Promise.all([
     prisma.user.findMany({ where: { referredById: user.id }, select: { name: true, createdAt: true } }),
-    prisma.commission.findMany({ where: { referrerId: user.id }, orderBy: { createdAt: "desc" } }),
+    prisma.commission.findMany({ where: { referrerId: user.id, ...payableCommissionWhere }, orderBy: { createdAt: "desc" } }),
   ]);
 
   const totalEarned = commissions.reduce((sum, c) => sum + c.amount, 0);

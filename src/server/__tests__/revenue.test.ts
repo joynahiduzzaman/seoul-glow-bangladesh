@@ -118,3 +118,42 @@ describe("no page computes revenue independently", () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * Affiliate commissions are the same defect one table over, and worse: revenue
+ * was merely displayed wrongly, whereas a commission is money owed to a real
+ * person. One was written at order placement and never reversed, so cancelling
+ * an order left the payout obligation standing forever.
+ *
+ * Commission.orderId is a plain column rather than a relation, so this cannot be
+ * a query filter like revenueWhere — it has to be maintained on the transition,
+ * which is what these assert.
+ */
+describe("affiliate commissions follow the order's fate", () => {
+  const handler = readFileSync(
+    path.resolve(process.cwd(), "src/app/api/admin/orders/[id]/route.ts"),
+    "utf8"
+  );
+  const commissions = readFileSync(path.resolve(process.cwd(), "src/server/commissions.ts"), "utf8");
+
+  it("syncs commissions whenever an order's status changes", () => {
+    expect(handler).toMatch(/syncCommissionsForOrderStatus\(/);
+  });
+
+  it("voids on cancellation and reinstates on reactivation", () => {
+    expect(commissions).toMatch(/status: VOID/);
+    expect(commissions).toMatch(/status: PENDING/);
+  });
+
+  it("never silently voids a commission that was already paid out", () => {
+    // That money has left the business; hiding it would conceal a real loss.
+    expect(commissions).toMatch(/already PAID/i);
+    expect(commissions).toMatch(/updateMany\(\{\s*where: \{ orderId, status: PENDING \}/);
+  });
+
+  it("excludes voided commissions from affiliate totals", () => {
+    for (const f of ["src/app/admin/affiliates/page.tsx", "src/app/api/account/referrals/route.ts"]) {
+      expect(readFileSync(path.resolve(process.cwd(), f), "utf8"), f).toMatch(/payableCommissionWhere/);
+    }
+  });
+});

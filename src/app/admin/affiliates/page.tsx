@@ -1,11 +1,13 @@
 import { prisma } from "@/server/db";
 import { formatBDT } from "@/lib/utils";
 import MarkPaidButton from "@/components/admin/MarkPaidButton";
+import { payableCommissionWhere } from "@/server/commissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAffiliatesPage() {
   const commissions = await prisma.commission.findMany({
+    where: payableCommissionWhere,
     include: { referrer: { select: { name: true, email: true, referralCode: true } } },
     orderBy: { createdAt: "desc" },
   });

@@ -6,6 +6,7 @@ import { adjustStock } from "@/server/inventory";
 import { logOrderEvent } from "@/server/order-events";
 import { ORDER_STATUSES, PAYMENT_STATUSES, STOCK_RESTORE_STATUSES, canTransitionStatus, validNextStatuses } from "@/lib/order-status";
 import { z } from "zod";
+import { syncCommissionsForOrderStatus } from "@/server/commissions";
 
 const schema = z.object({
   status: z.enum(ORDER_STATUSES).optional(),
@@ -97,6 +98,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         await adjustStock(item.productId, -item.quantity, `Order ${order.orderNumber} reactivated — stock re-reserved`, admin.name);
       }
     }
+    // Affiliate commissions follow the same transition as stock: a cancelled
+    // order must not leave a live payout obligation behind.
+    await syncCommissionsForOrderStatus(order.id, existing.status, parsed.data.status, admin.name);
     await logOrderEvent(order.id, "STATUS_CHANGE", `Status changed from ${existing.status} to ${parsed.data.status}`, admin.name);
   }
 
