@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import PasswordField from "@/components/PasswordField";
 
 export default function ProfileForm({ name, phone, email }: { name: string; phone: string; email: string }) {
   const router = useRouter();
@@ -53,8 +54,8 @@ export default function ProfileForm({ name, phone, email }: { name: string; phon
       <div className="border-t border-ink/10 pt-4">
         <p className="text-sm font-medium mb-3">Change Password (optional)</p>
         <div className="space-y-3">
-          <input type="password" placeholder="Current password" value={form.currentPassword} onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
-          <input type="password" placeholder="New password (min. 6 characters)" value={form.newPassword} onChange={(e) => setForm({ ...form, newPassword: e.target.value })} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
+          <PasswordField placeholder="Current password" label="Current password" value={form.currentPassword} onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
+          <PasswordField placeholder="New password (min. 6 characters)" label="New password" value={form.newPassword} onChange={(e) => setForm({ ...form, newPassword: e.target.value })} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
         </div>
       </div>
 

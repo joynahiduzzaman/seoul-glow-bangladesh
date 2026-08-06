@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { AlertTriangle } from "lucide-react";
+import PasswordField from "@/components/PasswordField";
 
 export default function SettingsPage({ initialMarketingOptIn }: { initialMarketingOptIn: boolean }) {
   const router = useRouter();
@@ -102,9 +103,9 @@ export default function SettingsPage({ initialMarketingOptIn }: { initialMarketi
           </button>
         ) : (
           <div className="space-y-3">
-            <input
-              type="password"
+            <PasswordField
               placeholder="Enter your password to confirm"
+              label="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-red-200 px-4 py-2.5 text-sm"

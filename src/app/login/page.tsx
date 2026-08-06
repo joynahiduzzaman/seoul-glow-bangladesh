@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/use-locale";
 import { safeRedirectPath } from "@/lib/utils";
 import SocialLoginButtons from "@/components/SocialLoginButtons";
+import PasswordField from "@/components/PasswordField";
 
 type Tab = "email" | "phone";
 
@@ -120,10 +121,10 @@ function LoginForm() {
               />
             </div>
           )}
-          <input
-            type="password"
+          <PasswordField
             required
             placeholder="Password"
+            label="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="field"

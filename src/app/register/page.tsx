@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/use-locale";
 import { safeRedirectPath } from "@/lib/utils";
 import SocialLoginButtons from "@/components/SocialLoginButtons";
+import PasswordField from "@/components/PasswordField";
 
 function RegisterForm() {
   const router = useRouter();
@@ -76,7 +77,7 @@ function RegisterForm() {
             />
           </div>
 
-          <input type="password" required minLength={6} placeholder="Password (min. 6 characters)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="field" />
+          <PasswordField required minLength={6} placeholder="Password (min. 6 characters)" label="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="field" />
           <button disabled={loading} className="btn-primary w-full">
             {loading && <Loader2 size={16} className="animate-spin" />}
             {loading ? dict.auth.signingIn : dict.auth.createAccount}

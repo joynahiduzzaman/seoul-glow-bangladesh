@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import PasswordField from "@/components/PasswordField";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -50,11 +51,11 @@ function ResetPasswordForm() {
           <h1 className="font-display text-2xl font-semibold">Set a New Password</h1>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="password"
+          <PasswordField
             required
             minLength={6}
             placeholder="New password (min. 6 characters)"
+            label="New password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="field"
