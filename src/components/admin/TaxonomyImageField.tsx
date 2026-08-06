@@ -93,34 +93,27 @@ export default function TaxonomyImageField({
           const file = e.dataTransfer.files?.[0];
           if (file) handleFile(file);
         }}
-        className={`relative aspect-square w-full overflow-hidden rounded-xl border-2 border-dashed transition-colors ${
+        className={`relative aspect-square w-full max-w-[240px] overflow-hidden rounded-xl border-2 border-dashed transition-colors ${
           dragging ? "border-rose-gold bg-rose-gold/5" : error ? "border-red-300 bg-red-50/40" : "border-ink/15 bg-beige/40"
         }`}
       >
         {shown ? (
           <>
             <Image src={shown} alt="" fill sizes="240px" className="object-cover" unoptimized={Boolean(localPreview)} />
-            {/* Hover reveals the actions rather than parking two buttons under
-                every tile — the grid stays calm until you intend to change one. */}
-            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-ink/0 opacity-0 transition-all hover:bg-ink/50 hover:opacity-100 focus-within:bg-ink/50 focus-within:opacity-100">
-              <button
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                disabled={disabled || uploading}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-2 text-xs font-semibold text-ink shadow-e2 disabled:opacity-50"
-              >
-                <Upload size={13} /> Replace
-              </button>
-              <button
-                type="button"
-                onClick={() => { onChange(""); setLocalPreview(null); setError(null); toast.success("Image removed"); }}
-                disabled={disabled || uploading}
-                aria-label={`Remove ${label.toLowerCase()}`}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-2 text-xs font-semibold text-red-600 shadow-e2 disabled:opacity-50"
-              >
-                <Trash2 size={13} /> Remove
-              </button>
-            </div>
+            {/* Tapping the tile is the same as pressing Replace. Phones have no
+                hover, so the buttons below are the real controls — this is just
+                the shortcut a pointer user expects from a picture. */}
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={disabled || uploading}
+              aria-label={`Replace ${label.toLowerCase()}`}
+              className="absolute inset-0 flex items-center justify-center bg-ink/0 opacity-0 transition-all hover:bg-ink/40 hover:opacity-100 focus-visible:bg-ink/40 focus-visible:opacity-100"
+            >
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-2 text-xs font-semibold text-ink shadow-e2">
+                <Upload size={13} aria-hidden="true" /> Replace
+              </span>
+            </button>
           </>
         ) : (
           <button
@@ -142,6 +135,30 @@ export default function TaxonomyImageField({
           </div>
         )}
       </div>
+
+      {/* Always visible, never hover-dependent: a phone has no hover, and an
+          image that cannot be changed on a phone is the bug this field exists
+          to fix. Both are comfortably above the 24px minimum touch target. */}
+      {shown && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={disabled || uploading}
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-ink/15 px-3.5 text-xs font-semibold text-ink transition-colors hover:bg-beige disabled:opacity-50"
+          >
+            <Upload size={13} aria-hidden="true" /> Replace image
+          </button>
+          <button
+            type="button"
+            onClick={() => { onChange(""); setLocalPreview(null); setError(null); toast.success("Image removed"); }}
+            disabled={disabled || uploading}
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-red-200 px-3.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+          >
+            <Trash2 size={13} aria-hidden="true" /> Remove
+          </button>
+        </div>
+      )}
 
       {error && (
         <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-red-600">

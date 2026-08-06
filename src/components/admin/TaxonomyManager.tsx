@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -59,6 +59,17 @@ export default function TaxonomyManager({
   const blank = { id: "", name: "", slug: "", image: "", description: "", country: "" };
   const [draft, setDraft] = useState<typeof blank | null>(null);
   const isNew = draft?.id === "";
+  const nameRef = useRef<HTMLInputElement>(null);
+  const draftId = draft?.id;
+
+  // Focus the name field only on a pointer device, and only when the drawer
+  // opens. A phone would raise the keyboard immediately, covering the image
+  // field the editor was opened to reach — and keying this on the row id rather
+  // than the draft object keeps it from stealing focus back on every keystroke.
+  useEffect(() => {
+    if (draftId === undefined) return;
+    if (window.matchMedia("(hover: hover)").matches) nameRef.current?.focus();
+  }, [draftId]);
 
   useEffect(() => {
     if (!draft) return;
@@ -66,7 +77,15 @@ export default function TaxonomyManager({
       if (e.key === "Escape") setDraft(null);
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    // Without this the page behind keeps scrolling once the drawer's own
+    // content reaches its end — on a phone the drawer covers the screen, so the
+    // list silently scrolls away underneath it.
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [draft]);
 
   // ── Filtering, sorting ────────────────────────────────────────────────────
@@ -165,69 +184,81 @@ export default function TaxonomyManager({
   return (
     <div>
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold">{kind === "categories" ? "Categories" : "Brands"}</h1>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-semibold sm:text-3xl">{kind === "categories" ? "Categories" : "Brands"}</h1>
           <p className="mt-1 text-sm text-ink/70">
             {rows.length} total · {totalProducts} product{totalProducts === 1 ? "" : "s"} assigned
             {emptyCount > 0 && ` · ${emptyCount} empty`}
           </p>
         </div>
-        <button onClick={() => setDraft({ ...blank })} className="btn-primary">
-          <Plus size={16} /> Add {label}
+        <button onClick={() => setDraft({ ...blank })} className="btn-primary w-full justify-center sm:w-auto">
+          <Plus size={16} aria-hidden="true" /> Add {label}
         </button>
       </div>
 
       {/* ── Toolbar ────────────────────────────────────────────────────── */}
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[200px] flex-1">
+      {/* Stacked on a phone: four controls on one row leaves the search box too
+          narrow to read what you typed, and wrapping them mid-row reads as a
+          jumble. */}
+      <div className="mb-5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+        <div className="relative sm:min-w-[220px] sm:flex-1">
           <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/35" aria-hidden="true" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Search ${kind} by name or web address…`}
+            placeholder={`Search ${kind}…`}
             aria-label={`Search ${kind}`}
             className="field !py-2.5 !pl-10"
           />
         </div>
 
-        <label className="sr-only" htmlFor="tax-sort">Sort</label>
-        <div className="relative">
-          <ArrowUpDown size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" aria-hidden="true" />
-          <select
-            id="tax-sort"
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-            className="field !py-2.5 !pl-9 !pr-8 text-sm"
-          >
-            <option value="name">Name (A–Z)</option>
-            <option value="products">Most products</option>
-            <option value="newest">Newest first</option>
-          </select>
-        </div>
-
-        <button
-          onClick={() => setOnlyEmpty((v) => !v)}
-          aria-pressed={onlyEmpty}
-          className={`rounded-xl border px-3.5 py-2.5 text-sm font-medium transition-colors ${
-            onlyEmpty ? "border-rose-gold bg-rose-gold/10 text-rose-gold-text" : "border-border-soft text-ink/70 hover:border-ink/20"
-          }`}
-        >
-          Empty only
-        </button>
-
-        <div className="flex overflow-hidden rounded-xl border border-border-soft">
-          {([["grid", LayoutGrid], ["list", Rows3]] as const).map(([mode, Icon]) => (
-            <button
-              key={mode}
-              onClick={() => setView(mode)}
-              aria-label={`${mode} view`}
-              aria-pressed={view === mode}
-              className={`px-3 py-2.5 transition-colors ${view === mode ? "bg-ink text-cream" : "text-ink/50 hover:bg-beige"}`}
+        {/* Sort gets its own row on a phone. Sharing one with the filter and the
+            view toggle left it 46px of text space, which rendered "Name (A–Z)"
+            as "Nar" — an admin could not read which sort was active. */}
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
+          <label className="sr-only" htmlFor="tax-sort">Sort</label>
+          <div className="relative min-w-0 sm:flex-none">
+            {/* The icon is dropped on a narrow screen: its padding was leaving
+                the select too narrow to show which sort is actually active. */}
+            <ArrowUpDown size={14} className="pointer-events-none absolute left-3 top-1/2 hidden -translate-y-1/2 text-ink/35 sm:block" aria-hidden="true" />
+            <select
+              id="tax-sort"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              className="field w-full !py-2.5 !pl-3 !pr-8 text-sm sm:!pl-9"
             >
-              <Icon size={15} />
+              <option value="name">Name (A–Z)</option>
+              <option value="products">Most products</option>
+              <option value="newest">Newest first</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => setOnlyEmpty((v) => !v)}
+              aria-pressed={onlyEmpty}
+              className={`shrink-0 whitespace-nowrap rounded-xl border px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                onlyEmpty ? "border-rose-gold bg-rose-gold/10 text-rose-gold-text" : "border-border-soft text-ink/70 hover:border-ink/20"
+              }`}
+            >
+              Empty only
             </button>
-          ))}
+
+            <div className="ml-auto flex shrink-0 overflow-hidden rounded-xl border border-border-soft sm:ml-0">
+              {([["grid", LayoutGrid], ["list", Rows3]] as const).map(([mode, Icon]) => (
+                <button
+                  key={mode}
+                  onClick={() => setView(mode)}
+                  aria-label={`${mode} view`}
+                  aria-pressed={view === mode}
+                  className={`px-3 py-2.5 transition-colors ${view === mode ? "bg-ink text-cream" : "text-ink/50 hover:bg-beige"}`}
+                >
+                  <Icon size={15} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -260,7 +291,10 @@ export default function TaxonomyManager({
         <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {visible.map((row) => (
             <li key={row.id} className="card-surface group relative overflow-hidden">
-              <label className="absolute left-3 top-3 z-10 cursor-pointer">
+              {/* A bare 16px checkbox sitting on a photograph is both hard to
+                  see and below the 24px minimum touch target, so it gets a
+                  padded, opaque hit area of its own. */}
+              <label className="absolute left-2 top-2 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-white/85 shadow-e1 backdrop-blur-sm">
                 <span className="sr-only">Select {row.name}</span>
                 <input
                   type="checkbox"
@@ -294,9 +328,12 @@ export default function TaxonomyManager({
                 <div className="p-3.5">
                   <p className="truncate font-medium leading-tight">{row.name}</p>
                   <p className="mt-0.5 truncate text-[11px] text-ink/45">/{row.slug}</p>
-                  <div className="mt-2.5 flex items-center gap-2">
+                  {/* Two columns on a 320px phone leave roughly 117px of card
+                      here, so these wrap onto separate lines rather than
+                      breaking mid-word. */}
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <StatusPill count={row.productCount} />
-                    <span className="text-[11px] text-ink/40">
+                    <span className="whitespace-nowrap text-[11px] text-ink/40">
                       {new Date(row.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                     </span>
                   </div>
@@ -327,28 +364,41 @@ export default function TaxonomyManager({
           ))}
         </ul>
       ) : (
+        // No flex-wrap on the rows: the name cell can shrink to nothing, so
+        // wrapping never triggers and a narrow screen would simply squeeze the
+        // name away. Fixed cells are shrink-0, the name takes what is left, and
+        // columns that do not fit are dropped by breakpoint instead.
         <ul className="space-y-2">
           {visible.map((row) => (
-            <li key={row.id} className="card-surface flex flex-wrap items-center gap-4 p-3.5">
-              <input
-                type="checkbox"
-                checked={selected.has(row.id)}
-                onChange={(e) => setSelected((s) => { const n = new Set(s); e.target.checked ? n.add(row.id) : n.delete(row.id); return n; })}
-                aria-label={`Select ${row.name}`}
-                className="h-4 w-4 shrink-0 rounded border-ink/25 accent-rose-gold"
-              />
-              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-beige">
+            <li key={row.id} className="card-surface flex items-center gap-2 p-3 sm:gap-4 sm:p-3.5">
+              <label className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center sm:h-9 sm:w-9">
+                <span className="sr-only">Select {row.name}</span>
+                <input
+                  type="checkbox"
+                  checked={selected.has(row.id)}
+                  onChange={(e) => setSelected((s) => { const n = new Set(s); e.target.checked ? n.add(row.id) : n.delete(row.id); return n; })}
+                  className="h-4 w-4 rounded border-ink/25 accent-rose-gold"
+                />
+              </label>
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-beige sm:h-12 sm:w-12">
                 {row.image ? <Image src={row.image} alt="" fill sizes="48px" className="object-cover" /> : null}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{row.name}</p>
                 <p className="truncate text-[11px] text-ink/45">/{row.slug}</p>
+                {/* On a phone the pill moves under the name rather than
+                    competing with it for the same row. */}
+                <span className="mt-1 inline-flex sm:hidden">
+                  <StatusPill count={row.productCount} />
+                </span>
               </div>
-              <StatusPill count={row.productCount} />
-              <span className="hidden text-[11px] text-ink/40 sm:block">
+              <span className="hidden shrink-0 sm:inline-flex">
+                <StatusPill count={row.productCount} />
+              </span>
+              <span className="hidden shrink-0 text-[11px] text-ink/40 lg:block">
                 {new Date(row.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
               </span>
-              <div className="flex items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-1.5">
                 <IconButton label={`Edit ${row.name}`} onClick={() => setDraft({
                   id: row.id, name: row.name, slug: row.slug, image: row.image || "",
                   description: row.description || "", country: row.country || "",
@@ -373,14 +423,18 @@ export default function TaxonomyManager({
               button, so nothing is lost by hiding it from assistive tech. */}
           <div aria-hidden="true" onClick={() => setDraft(null)} className="absolute inset-0 bg-ink/40 backdrop-blur-sm" />
           <div className="relative flex h-full w-full max-w-md flex-col overflow-y-auto bg-white shadow-e4">
-            <div className="flex items-center justify-between border-b border-border-soft px-6 py-4">
+            <div className="flex items-center justify-between border-b border-border-soft px-5 py-4 sm:px-6">
               <h2 className="font-display text-lg">{isNew ? `New ${label}` : `Edit ${label}`}</h2>
-              <button onClick={() => setDraft(null)} aria-label="Close editor" className="text-ink/50 hover:text-ink">
-                <X size={18} />
+              <button
+                onClick={() => setDraft(null)}
+                aria-label="Close editor"
+                className="-mr-2 flex h-10 w-10 items-center justify-center rounded-lg text-ink/50 transition-colors hover:bg-beige hover:text-ink"
+              >
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
-            <div className="flex-1 space-y-5 px-6 py-5">
+            <div className="flex-1 space-y-5 px-5 py-5 sm:px-6">
               <TaxonomyImageField
                 label={imageLabel}
                 value={draft.image}
@@ -392,7 +446,7 @@ export default function TaxonomyManager({
                 <label className="field-label" htmlFor="tax-name">Name</label>
                 <input
                   id="tax-name"
-                  autoFocus
+                  ref={nameRef}
                   value={draft.name}
                   onChange={(e) => setDraft((d) => (d ? { ...d, name: e.target.value } : d))}
                   placeholder={kind === "categories" ? "e.g. Sunscreen" : "e.g. COSRX"}
@@ -448,8 +502,8 @@ export default function TaxonomyManager({
               )}
             </div>
 
-            <div className="sticky bottom-0 flex gap-3 border-t border-border-soft bg-white px-6 py-4">
-              <button onClick={save} disabled={busy === "save"} className="btn-primary flex-1">
+            <div className="sticky bottom-0 flex gap-3 border-t border-border-soft bg-white px-5 py-4 sm:px-6">
+              <button onClick={save} disabled={busy === "save"} className="btn-primary flex-1 justify-center">
                 {busy === "save" && <Loader2 size={15} className="animate-spin" />}
                 {isNew ? `Create ${label}` : "Save changes"}
               </button>
@@ -466,11 +520,11 @@ export default function TaxonomyManager({
  *  one would mean a schema change this redesign does not need. */
 function StatusPill({ count }: { count: number }) {
   return count > 0 ? (
-    <span className="rounded-full bg-badge-new-text/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-badge-new-text">
+    <span className="whitespace-nowrap rounded-full bg-badge-new-text/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-badge-new-text">
       {count} product{count === 1 ? "" : "s"}
     </span>
   ) : (
-    <span className="rounded-full bg-ink/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink/45">Empty</span>
+    <span className="whitespace-nowrap rounded-full bg-ink/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink/45">Empty</span>
   );
 }
 
