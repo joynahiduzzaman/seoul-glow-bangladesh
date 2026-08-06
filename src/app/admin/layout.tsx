@@ -18,6 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Dashboard", href: "/admin", icon: "dashboard" as const },
     { label: "Homepage", href: "/admin/homepage", icon: "homepage" as const },
     { label: "Site Content", href: "/admin/content", icon: "content" as const },
+    { label: "Instagram Feed", href: "/admin/instagram", icon: "instagram" as const },
     { label: "Products", href: "/admin/products", icon: "products" as const },
     { label: "Inventory", href: "/admin/inventory", icon: "inventory" as const, badge: lowStockCount > 0 ? lowStockCount : undefined },
     { label: "Orders", href: "/admin/orders", icon: "orders" as const, badge: pendingOrders > 0 ? pendingOrders : undefined },

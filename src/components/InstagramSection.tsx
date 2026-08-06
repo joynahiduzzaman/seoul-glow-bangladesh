@@ -18,7 +18,7 @@ export default async function InstagramSection({
   title,
   subtitle,
   handle: handleOverride,
-  postLimit = 6,
+  postLimit = 4,
   backgroundColor,
 }: {
   title?: string;
@@ -30,7 +30,7 @@ export default async function InstagramSection({
 }) {
   const handle = handleOverride || "seoulglowbangladesh";
   const profileUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL || `https://www.instagram.com/${handle}/`;
-  const limit = Math.min(Math.max(postLimit, 4), 8);
+  const limit = Math.min(Math.max(postLimit, 1), 8);
 
   const posts = await getInstagramPosts(limit);
 
@@ -74,14 +74,14 @@ function PostTile({ post, handle }: { post: InstagramPost; handle: string }) {
   return (
     <li>
       <a
-        href={post.permalink}
+        href={post.postUrl}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={label}
         className="group relative block aspect-square overflow-hidden rounded-lg bg-beige"
       >
         <Image
-          src={post.mediaUrl}
+          src={post.imageUrl}
           alt=""
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -93,11 +93,6 @@ function PostTile({ post, handle }: { post: InstagramPost; handle: string }) {
         >
           <Instagram size={20} className="text-white opacity-0 transition-opacity group-hover:opacity-100" />
         </div>
-        {post.mediaType === "VIDEO" && (
-          <span className="absolute right-2 top-2 rounded-full bg-ink/60 px-2 py-0.5 text-[10px] font-semibold text-white" aria-hidden="true">
-            Video
-          </span>
-        )}
       </a>
     </li>
   );
@@ -134,13 +129,13 @@ function FeedUnavailable({ profileUrl, handle }: { profileUrl: string; handle: s
  * posts arrive. A skeleton that changes the layout is worse than no skeleton.
  */
 export function InstagramSkeleton({
-  postLimit = 6,
+  postLimit = 4,
   backgroundColor,
 }: {
   postLimit?: number;
   backgroundColor?: string;
 }) {
-  const count = Math.min(Math.max(postLimit, 4), 8);
+  const count = Math.min(Math.max(postLimit, 1), 8);
   return (
     <section
       className="container-px mx-auto section-py"
