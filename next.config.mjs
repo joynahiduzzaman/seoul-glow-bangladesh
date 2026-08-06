@@ -32,6 +32,11 @@ const nextConfig = {
       // Cloudinary. Without this entry next/image refuses the host outright and
       // every uploaded image renders as a broken placeholder.
       { protocol: 'https', hostname: 'res.cloudinary.com' },
+      // Instagram serves media from rotating scontent-*.cdninstagram.com hosts
+      // and occasionally fbcdn.net, so both need wildcard entries or every
+      // post renders as a broken image.
+      { protocol: 'https', hostname: '**.cdninstagram.com' },
+      { protocol: 'https', hostname: '**.fbcdn.net' },
     ],
   },
   async redirects() {

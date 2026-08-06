@@ -238,7 +238,6 @@ export default function PreviewFramePage() {
             subtitle={settings.subtitle}
             handle={settings.handle}
             postLimit={settings.postLimit || 6}
-            images={settings.images}
             backgroundColor={bg}
           />
         );

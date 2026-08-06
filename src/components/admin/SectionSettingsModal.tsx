@@ -507,10 +507,14 @@ export default function SectionSettingsModal({
                     </div>
                     <div>
                       <label className="block text-[11px] text-ink/70 mb-1.5">Posts to show</label>
-                      <input type="number" min={3} max={12} value={draft.settings.postLimit ?? 6} onChange={(e) => set("postLimit", Number(e.target.value))} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
+                      <input type="number" min={4} max={8} value={draft.settings.postLimit ?? 6} onChange={(e) => set("postLimit", Number(e.target.value))} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
                     </div>
                   </div>
-                  <ImageUploadField label="Grid images (leave empty for default placeholders)" images={draft.settings.images || []} onChange={(images) => set("images", images)} />
+                  <p className="rounded-lg bg-beige/60 px-4 py-3 text-[11px] leading-relaxed text-ink/70">
+                    Posts are pulled live from your Instagram account, so there is nothing to
+                    upload here. If the feed is unavailable the section shows a link to your
+                    profile instead of placeholder images.
+                  </p>
                 </div>
               )}
 
