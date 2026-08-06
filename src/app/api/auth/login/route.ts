@@ -3,13 +3,14 @@ import { prisma } from "@/server/db";
 import { verifyPassword, signAccessToken, signRefreshToken, setAuthCookies, isRequestSecure } from "@/server/auth";
 import { checkRateLimit, getClientIp } from "@/server/rate-limit";
 import { z } from "zod";
+import { emailSchema } from "@/lib/email-identity";
 
 // Supports two identifier types — email or phone — matching the tabbed login UI.
 // Exactly one of the two must be present; which one is decided by which tab the
 // person had open, not guessed from the input's shape.
 const schema = z
   .object({
-    email: z.string().email().optional(),
+    email: emailSchema.optional(),
     phone: z.string().min(1).optional(),
     password: z.string().min(1),
   })

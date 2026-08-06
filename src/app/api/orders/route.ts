@@ -7,6 +7,7 @@ import { paymentProviders } from "@/server/payments";
 import { checkRateLimit, getClientIp } from "@/server/rate-limit";
 import { verifyOrderItems, resolveCoupon, incrementCouponUsage, createOrderRecord, finalizeOrderEffects, OrderValidationError } from "@/server/orders";
 import { z } from "zod";
+import { emailSchema } from "@/lib/email-identity";
 
 const itemSchema = z.object({
   productId: z.string(),
@@ -29,7 +30,7 @@ const orderSchema = z.object({
     insideDhaka: z.boolean(),
     label: z.string().optional(),
   }),
-  guestEmail: z.string().email().optional(),
+  guestEmail: emailSchema.optional(),
   giftNote: z.string().optional(),
 });
 

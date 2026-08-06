@@ -3,6 +3,7 @@ import { prisma } from "@/server/db";
 import { getCurrentUser } from "@/server/auth";
 import { generateReferralCode } from "@/lib/utils";
 import { z } from "zod";
+import { emailSchema } from "@/lib/email-identity";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
 
 const createSchema = z.object({
   name: z.string().min(2),
-  email: z.string().email(),
+  email: emailSchema,
   phone: z.string().min(6).optional(),
 });
 

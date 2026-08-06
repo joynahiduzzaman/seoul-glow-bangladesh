@@ -23,7 +23,8 @@ import { randomBytes } from "node:crypto";
 const MIN_LENGTH = 10;
 
 async function main() {
-  const [email, supplied] = process.argv.slice(2);
+  const [emailRaw, supplied] = process.argv.slice(2);
+  const email = emailRaw?.trim().toLowerCase();
 
   if (!email) {
     console.error("Usage: npx tsx scripts/set-admin-password.ts <email> [password]");

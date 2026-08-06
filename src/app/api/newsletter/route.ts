@@ -3,8 +3,9 @@ import { prisma } from "@/server/db";
 import { sendNewsletterWelcomeEmail } from "@/server/email";
 import { checkRateLimit, getClientIp } from "@/server/rate-limit";
 import { z } from "zod";
+import { emailSchema } from "@/lib/email-identity";
 
-const schema = z.object({ email: z.string().email() });
+const schema = z.object({ email: emailSchema });
 
 export async function POST(req: NextRequest) {
   const rl = checkRateLimit(`newsletter:${getClientIp(req)}`, 5, 10 * 60 * 1000);

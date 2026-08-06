@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db";
 import { checkRateLimit, getClientIp } from "@/server/rate-limit";
 import { z } from "zod";
+import { emailSchema } from "@/lib/email-identity";
 
 const schema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   name: z.string().optional(),
   phone: z.string().optional(),
   items: z.array(z.object({ productId: z.string(), name: z.string(), quantity: z.number() })).min(1),

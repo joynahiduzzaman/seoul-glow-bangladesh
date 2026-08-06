@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp } from "@/server/rate-limit";
 import { sendContactFormEmail } from "@/server/email";
+import { emailSchema } from "@/lib/email-identity";
 
 // Public — anyone can reach the Contact page without an account, unlike the
 // authenticated support-ticket system under /account/support.
 const schema = z.object({
   name: z.string().min(1).max(120),
-  email: z.string().email(),
+  email: emailSchema,
   subject: z.string().min(1).max(150),
   message: z.string().min(10).max(2000),
 });

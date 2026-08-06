@@ -4,8 +4,9 @@ import { signActionToken } from "@/server/auth";
 import { sendPasswordResetEmail } from "@/server/email";
 import { checkRateLimit, getClientIp } from "@/server/rate-limit";
 import { z } from "zod";
+import { emailSchema } from "@/lib/email-identity";
 
-const schema = z.object({ email: z.string().email() });
+const schema = z.object({ email: emailSchema });
 
 export async function POST(req: NextRequest) {
   // 3 requests per 15 minutes per IP — resets are also throttled per-email below.

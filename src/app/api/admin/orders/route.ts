@@ -7,6 +7,7 @@ import { PAYMENT_METHODS } from "@/lib/payment";
 import { verifyOrderItems, resolveCoupon, incrementCouponUsage, createOrderRecord, finalizeOrderEffects, OrderValidationError } from "@/server/orders";
 import { logOrderEvent } from "@/server/order-events";
 import { z } from "zod";
+import { emailSchema } from "@/lib/email-identity";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -27,7 +28,7 @@ const schema = z
       insideDhaka: z.boolean(),
       label: z.string().optional(),
     }),
-    guestEmail: z.string().email().optional().or(z.literal("")),
+    guestEmail: emailSchema.optional().or(z.literal("")),
     giftNote: z.string().optional(),
     couponCode: z.string().optional(),
     manualDiscount: z.number().min(0).optional(),

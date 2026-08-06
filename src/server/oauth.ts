@@ -14,6 +14,7 @@ import { signAccessToken, signRefreshToken, setAuthCookies, isRequestSecure } fr
 import { linkGuestOrdersToAccount } from "./orders";
 import { generateReferralCode, safeRedirectPath } from "@/lib/utils";
 import { SOCIAL_LOGIN_ENABLED } from "@/lib/auth-providers";
+import { normalizeEmail } from "@/lib/email-identity";
 
 export type OAuthProvider = "google" | "facebook";
 
@@ -98,7 +99,7 @@ export async function fetchProfile(
     });
     if (!profileRes.ok) throw new Error("Google profile fetch failed");
     const profile = await profileRes.json();
-    return { oauthId: profile.sub, email: profile.email ?? null, name: profile.name || profile.email || "Google User" };
+    return { oauthId: profile.sub, email: profile.email ? normalizeEmail(profile.email) : null, name: profile.name || profile.email || "Google User" };
   }
 
   const tokenParams = new URLSearchParams({
@@ -130,7 +131,7 @@ export async function fetchProfile(
     throw new Error("Facebook profile fetch failed");
   }
   const profile = await profileRes.json();
-  return { oauthId: profile.id, email: profile.email ?? null, name: profile.name || "Facebook User" };
+  return { oauthId: profile.id, email: profile.email ? normalizeEmail(profile.email) : null, name: profile.name || "Facebook User" };
 }
 
 // ---------------------------------------------------------------------------

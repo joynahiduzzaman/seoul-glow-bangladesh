@@ -96,7 +96,7 @@ function preflight(): { email: string; password: string; generated: boolean } {
     console.warn("⚠  SEED_ALLOW_PRODUCTION=true — seeding a PRODUCTION database. Existing orders will be deleted.");
   }
 
-  const email = process.env.SEED_ADMIN_EMAIL || "seoulglow26@gmail.com";
+  const email = (process.env.SEED_ADMIN_EMAIL || "seoulglow26@gmail.com").trim().toLowerCase();
   const supplied = process.env.SEED_ADMIN_PASSWORD;
 
   if (supplied) return { email, password: supplied, generated: false };

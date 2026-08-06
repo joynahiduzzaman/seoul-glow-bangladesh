@@ -13,10 +13,14 @@ import { sendWelcomeEmail, sendVerificationEmail } from "@/server/email";
 import { linkGuestOrdersToAccount } from "@/server/orders";
 import { checkRateLimit, getClientIp } from "@/server/rate-limit";
 import { z } from "zod";
+import { emailSchema } from "@/lib/email-identity";
 
 const schema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Enter a valid email"),
+  // Normalised, not just validated: a raw address here would let
+  // "Foo@Gmail.com" be stored as a second account alongside "foo@gmail.com",
+  // since the duplicate check below is an exact-match findUnique.
+  email: emailSchema,
   password: z.string().min(6, "Password must be at least 6 characters"),
   phone: z.string().optional(),
   referralCode: z.string().optional(), // captured from ?ref= link, see middleware/cookie on the storefront

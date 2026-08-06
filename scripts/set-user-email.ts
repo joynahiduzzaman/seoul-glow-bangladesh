@@ -15,7 +15,11 @@
 import { PrismaClient } from "@prisma/client";
 
 async function main() {
-  const [from, to] = process.argv.slice(2);
+  const [fromRaw, toRaw] = process.argv.slice(2);
+  // Same canonical form the app stores, so a script cannot create a row the
+  // login lookup will never match.
+  const from = fromRaw?.trim().toLowerCase();
+  const to = toRaw?.trim().toLowerCase();
 
   if (!from || !to) {
     console.error("Usage: npx tsx scripts/set-user-email.ts <current-email> <new-email>");
