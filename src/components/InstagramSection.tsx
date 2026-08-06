@@ -3,12 +3,10 @@ import { Instagram } from "lucide-react";
 /**
  * Instagram callout — a single invitation to the profile, nothing more.
  *
- * There is deliberately no feed here. Meta's Basic Display API was shut down in
- * December 2024, and the Graph API that replaced it needs a Business account
- * inside an app that has cleared review; a manually curated grid was the other
- * option and carries an ongoing maintenance cost for what is, in the end, an
- * outbound link. So this stays one honest link rather than a gallery that either
- * goes stale or shows photography the account never posted.
+ * There is deliberately no photo grid. A live feed is not available to this
+ * project, and a hand-curated one carries ongoing upkeep for what is, in the
+ * end, an outbound link. Kept as one honest link rather than a gallery that
+ * either goes stale or shows photography the account never posted.
  */
 export default function InstagramSection({
   title,

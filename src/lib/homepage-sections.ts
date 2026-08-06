@@ -161,10 +161,14 @@ export const SECTION_DEFINITIONS: SectionDefinition[] = [
   },
   {
     key: "instagram",
-    label: "Instagram Feed",
-    description: "Instagram post grid with a follow link.",
+    label: "Instagram",
+    description: "A link to your Instagram profile.",
     isCustom: false,
-    defaultSettings: { title: "", subtitle: "", handle: "", postLimit: 6, images: [] },
+    // postLimit and images are gone with the grid — the section renders a
+    // heading, a line of copy and one button, so there is nothing to count or
+    // upload. Existing rows may still carry those keys in their stored settings;
+    // they are simply ignored.
+    defaultSettings: { title: "", subtitle: "", handle: "" },
     hasTitleSubtitle: true,
   },
   {
