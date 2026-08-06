@@ -67,6 +67,33 @@ export const RESERVED_STATUSES: OrderStatus[] = ["PENDING", "CONFIRMED", "PACKED
  * of CANCELLED/RETURNED it passed through already did the restock. */
 export const STOCK_RESTORE_STATUSES: OrderStatus[] = ["CANCELLED", "RETURNED"];
 
+/**
+ * Revenue recognition. Money is only earned once the goods are delivered.
+ *
+ * This store is Cash on Delivery, so nothing is actually collected until the
+ * courier hands the parcel over: an order sitting at PENDING or SHIPPED is a
+ * expectation, not income, and one at CANCELLED, RETURNED or REFUNDED is not
+ * income at all. Counting anything else lets a cancelled order keep inflating
+ * lifetime revenue forever, which is what it did.
+ *
+ * Kept beside RESERVED_STATUSES and STOCK_RESTORE_STATUSES on purpose — every
+ * rule that depends on where an order sits in its lifecycle lives in this one
+ * file, so a new status cannot be added without confronting all of them.
+ */
+export const REVENUE_STATUSES: OrderStatus[] = ["DELIVERED"];
+
+/**
+ * Sold but not yet collected — real commitments worth seeing on a dashboard,
+ * reported separately so they are never mistaken for earnings. DRAFT is absent
+ * (never confirmed), as are the three terminal non-sale states.
+ */
+export const PIPELINE_STATUSES: OrderStatus[] = ["PENDING", "CONFIRMED", "PACKED", "SHIPPED"];
+
+/** True when an order's value counts toward realised revenue. */
+export function countsAsRevenue(status: string): boolean {
+  return REVENUE_STATUSES.includes(status as OrderStatus);
+}
+
 /** Customer-facing notification copy — statuses with no entry (DRAFT, REFUNDED
  * handled separately, or anything not customer-relevant) simply don't notify. */
 export const STATUS_CUSTOMER_MESSAGES: Partial<Record<OrderStatus, string>> = {

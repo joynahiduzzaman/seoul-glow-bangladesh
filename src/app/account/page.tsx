@@ -11,6 +11,7 @@ import {
 import DashboardEmptyState from "@/components/account/DashboardEmptyState";
 import OrderStatusTracker from "@/components/account/OrderStatusTracker";
 import RecentlyViewedRail from "@/components/RecentlyViewedRail";
+import { revenueWhere } from "@/server/revenue";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Dashboard" };
@@ -55,7 +56,7 @@ export default async function AccountDashboardPage() {
     prisma.order.findMany({ where: { userId: user.id, status: { not: "DRAFT" } }, include: { items: true }, orderBy: { createdAt: "desc" }, take: 3 }),
     prisma.order.count({ where: { userId: user.id, status: { not: "DRAFT" } } }),
     prisma.wishlistItem.count({ where: { userId: user.id } }),
-    prisma.order.aggregate({ where: { userId: user.id, paymentStatus: "PAID" }, _sum: { total: true } }),
+    prisma.order.aggregate({ where: { ...revenueWhere, userId: user.id }, _sum: { total: true } }),
     prisma.address.count({ where: { userId: user.id } }),
     // Same "active + not expired" filter as /api/coupons/active — coupons aren't
     // per-user in this schema, so "available to you" means "currently valid".

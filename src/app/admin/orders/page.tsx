@@ -7,6 +7,7 @@ import { ShoppingBag, Wallet, Clock, PackageSearch, CalendarCheck, Search, Plus,
 import StatCard from "@/components/admin/StatCard";
 import SortSelect from "@/components/admin/SortSelect";
 import OrdersTableClient from "@/components/admin/OrdersTableClient";
+import { revenueWhere } from "@/server/revenue";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,7 @@ export default async function AdminOrdersPage({
     prisma.order.count({ where: { status: "PENDING" } }),
     prisma.order.count({ where: { status: { in: ["CONFIRMED", "PACKED"] } } }),
     prisma.order.count({ where: { status: "DRAFT" } }),
-    prisma.order.aggregate({ where: { status: { notIn: ["DRAFT", "CANCELLED", "REFUNDED"] } }, _sum: { total: true } }),
+    prisma.order.aggregate({ where: revenueWhere, _sum: { total: true } }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));

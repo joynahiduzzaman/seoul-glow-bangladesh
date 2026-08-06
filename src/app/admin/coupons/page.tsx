@@ -5,6 +5,7 @@ import { formatBDT } from "@/lib/utils";
 import { Ticket, TicketX, Percent, Wallet, Search } from "lucide-react";
 import CouponsTableClient from "@/components/admin/CouponsTableClient";
 import SortSelect from "@/components/admin/SortSelect";
+import { revenueWhere } from "@/server/revenue";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function AdminCouponsPage({ searchParams }: { searchParams:
     prisma.coupon.count({ where: { active: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] } }),
     prisma.coupon.count({ where: { expiresAt: { lte: now } } }),
     prisma.coupon.aggregate({ _sum: { usedCount: true } }),
-    prisma.order.aggregate({ _sum: { discount: true }, where: { couponCode: { not: null } } }),
+    prisma.order.aggregate({ _sum: { discount: true }, where: { ...revenueWhere, couponCode: { not: null } } }),
   ]);
 
   const STATS = [

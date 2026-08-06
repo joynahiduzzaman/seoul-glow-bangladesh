@@ -3,6 +3,7 @@ import { prisma } from "@/server/db";
 import { formatBDT } from "@/lib/utils";
 import StatCard from "@/components/admin/StatCard";
 import SimpleBarChart from "@/components/admin/SimpleBarChart";
+import { getRevenueSummary, getDailyRevenue, getBestSellers } from "@/server/revenue";
 import {
   Wallet, TrendingUp, CalendarCheck, Clock, PackageSearch, CheckCircle2, XCircle,
   AlertTriangle, PackageX, Plus, ShoppingCart, Tag, LifeBuoy, Users, Package,
@@ -40,15 +41,11 @@ export default async function AdminDashboard() {
     packedOrders,
     deliveredOrders,
     cancelledOrders,
-    revenueAgg,
-    monthlyRevenueAgg,
     lowStockCount,
     outOfStockCount,
     lowStock,
     recentOrders,
     latestCustomers,
-    recentOrdersForChart,
-    topSellingRaw,
     totalProducts,
     totalCustomers,
     expiredCount,
@@ -59,19 +56,11 @@ export default async function AdminDashboard() {
     prisma.order.count({ where: { status: "PENDING" } }),
     prisma.order.count({ where: { status: "PACKED" } }),
     prisma.order.count({ where: { status: "DELIVERED" } }),
-    prisma.order.count({ where: { status: "CANCELLED" } }),
-    // Excludes DRAFT — a draft is an unconfirmed manual order that was never
-    // actually sold, so it shouldn't inflate lifetime/monthly revenue figures.
-    prisma.order.aggregate({ _sum: { total: true }, where: { status: { not: "DRAFT" } } }),
-    prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: monthStart }, status: { not: "DRAFT" } } }),
-    prisma.product.count({ where: { stock: { gt: 0, lt: 10 } } }),
+    prisma.order.count({ where: { status: "CANCELLED" } }),    prisma.product.count({ where: { stock: { gt: 0, lt: 10 } } }),
     prisma.product.count({ where: { stock: 0 } }),
     prisma.product.findMany({ where: { stock: { gt: 0, lt: 10 } }, take: 6, orderBy: { stock: "asc" } }),
     prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 6, include: { items: true, user: { select: { name: true } } } }),
-    prisma.user.findMany({ where: { role: "CUSTOMER" }, orderBy: { createdAt: "desc" }, take: 5 }),
-    prisma.order.findMany({ where: { createdAt: { gte: sevenDaysAgo } }, select: { createdAt: true, total: true } }),
-    prisma.orderItem.groupBy({ by: ["productId"], _sum: { quantity: true }, orderBy: { _sum: { quantity: "desc" } }, take: 5 }),
-    prisma.product.count(),
+    prisma.user.findMany({ where: { role: "CUSTOMER" }, orderBy: { createdAt: "desc" }, take: 5 }),    prisma.product.count(),
     prisma.user.count({ where: { role: "CUSTOMER" } }),
     // Expiry alerts — only products that still have stock to sell; an expired
     // item with 0 stock isn't an action item for anyone anymore.
@@ -84,29 +73,16 @@ export default async function AdminDashboard() {
     }),
   ]);
 
-  const totalRevenue = revenueAgg._sum.total || 0;
-  const monthlyRevenue = monthlyRevenueAgg._sum.total || 0;
+  // Revenue, the chart and best sellers all read the same rule from
+  // server/revenue.ts, so a cancelled order cannot count in one place and not
+  // another. See REVENUE_STATUSES in lib/order-status.ts for what qualifies.
+  const revenue = await getRevenueSummary(monthStart);
+  const totalRevenue = revenue.total;
+  const monthlyRevenue = revenue.monthly;
 
-  // Group last 7 days of orders by day in JS rather than a DB-specific date-trunc
-  // query — keeps this working identically across SQLite/Postgres/MySQL, matching
-  // how the rest of this project avoids raw/DB-specific SQL (see schema.prisma header).
-  const chartData = Array.from({ length: 7 }).map((_, i) => {
-    const day = new Date(sevenDaysAgo);
-    day.setDate(day.getDate() + i);
-    const dayKey = day.toDateString();
-    const total = recentOrdersForChart
-      .filter((o) => o.createdAt.toDateString() === dayKey)
-      .reduce((sum, o) => sum + o.total, 0);
-    return { label: day.toLocaleDateString("en-US", { weekday: "short" }), value: Math.round(total) };
-  });
+  const chartData = await getDailyRevenue(sevenDaysAgo, 7);
 
-  const topProductIds = topSellingRaw.map((t) => t.productId);
-  const topProducts = topProductIds.length
-    ? await prisma.product.findMany({ where: { id: { in: topProductIds } } })
-    : [];
-  const bestSellers = topSellingRaw
-    .map((t) => ({ product: topProducts.find((p) => p.id === t.productId), qty: t._sum.quantity || 0 }))
-    .filter((b) => b.product);
+  const bestSellers = await getBestSellers(5);
 
   const QUICK_ACTIONS = [
     { label: "Add Product", href: "/admin/products/new", icon: Plus },
@@ -124,8 +100,8 @@ export default async function AdminDashboard() {
 
       {/* Revenue + today headline row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <StatCard icon={Wallet} label="Total Revenue" value={formatBDT(totalRevenue)} tone="success" hint="All time, excluding drafts" />
-        <StatCard icon={TrendingUp} label="Monthly Revenue" value={formatBDT(monthlyRevenue)} tone="info" hint="This calendar month" />
+        <StatCard icon={Wallet} label="Total Revenue" value={formatBDT(totalRevenue)} tone="success" hint="Delivered orders, all time" />
+        <StatCard icon={TrendingUp} label="Monthly Revenue" value={formatBDT(monthlyRevenue)} tone="info" hint="Delivered this calendar month" />
         <StatCard icon={CalendarCheck} label="Today's Orders" value={todaysOrders} tone="violet" hint="Placed since midnight" />
       </div>
 
