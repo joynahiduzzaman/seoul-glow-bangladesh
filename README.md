@@ -13,7 +13,7 @@ This is a real, working full-stack application: every page is connected to a liv
 >
 > **Also in this build**:
 > - **Hero rebuilt again**, this time to a premium cinematic standard: full-viewport-height rotating background photography with a slow Ken Burns zoom, animated stat counters (count up on load), real trust indicators, and floating product cards showing actual bestseller data (name/price/rating pulled from the database, never placeholder numbers). `framer-motion` is back and safe to use now that the CSP `unsafe-eval` bug above is fixed — but by design, the headline/copy/CTA buttons are never gated behind motion succeeding (see the comment at the top of `Hero.tsx`); only supplementary elements (background crossfade, particles, floating cards) depend on it.
-> - **Frontend/backend code reorganized** — backend-only modules (database client, auth/JWT, email, payment gateways, rate limiting) moved to a new `src/server/` folder, never imported by anything the browser runs. See §16 for the full map of what to edit where.
+> - **Frontend/backend code reorganized** — backend-only modules (database client, auth/JWT, email, payment gateways, rate limiting) moved to a new `src/server/` folder, never imported by anything the browser runs. See §17 for the full map of what to edit where.
 > - **Product card images** made smaller/inset for a more premium boutique look.
 >
 > Earlier fixes, kept for reference:
@@ -407,7 +407,42 @@ No application code needs to change — all queries go through Prisma's database
 
 ---
 
-## 14. Activating real payments (Bangladesh gateways)
+## 14. Changing the database schema safely
+
+Deploys do **not** touch the production schema. `npm run build` is `next build` alone,
+so pushing code can never alter the database — migrations are a separate, deliberate act.
+
+```bash
+npm run db:backup           # full JSON export to backups/ — do this first, every time
+npm run db:migrate:status   # what is pending, and against which database
+npm run db:migrate:deploy   # apply pending migrations
+```
+
+**Take the backup before the migration, not after.** `db:backup` refuses to report success
+on an empty export, so a dump that silently captured nothing cannot be mistaken for a real
+one. Neon's point-in-time restore is still the better recovery tool — use it first if
+something goes wrong — but it has a retention window and restores all-or-nothing, whereas a
+local dump lasts indefinitely and can be inspected.
+
+### Never point a shadow database at production
+
+Prisma **drops and recreates** whatever `--shadow-database-url` points at. Aiming it at the
+live database destroys every row — this has happened to this project once already, and only
+Neon's restore recovered it. If a shadow database is needed, create a throwaway Neon branch
+and use that.
+
+```bash
+# WRONG — wipes production
+npx prisma migrate diff --shadow-database-url "$DIRECT_URL" ...
+
+# Right — a disposable branch that exists only for this
+npx prisma migrate diff --shadow-database-url "postgres://…/shadow-branch" ...
+```
+
+`prisma migrate dev` also uses a shadow database implicitly. On a database holding real
+data, prefer `migrate deploy` with a migration file you have read.
+
+## 15. Activating real payments (Bangladesh gateways)
 
 Every gateway integration in `src/lib/payments/` makes real HTTP calls to that provider's sandbox/production API. To go live:
 
@@ -421,7 +456,7 @@ Visa/MasterCard/American Express and Rocket are routed through **SSLCommerz**, w
 
 ---
 
-## 15. Docker
+## 16. Docker
 
 ```bash
 docker compose up --build
@@ -431,7 +466,7 @@ docker compose up --build
 
 ---
 
-## 16. Project structure
+## 17. Project structure
 
 This is a single Next.js project (frontend and backend intentionally share one codebase —
 no CORS, no cross-origin cookies, one `npm install`, one server to run) but the code
@@ -493,13 +528,13 @@ setup later (e.g. multiple frontends hitting the same API), this is a well-trodd
 migration path — the `src/server/` folder above is already shaped to make that split
 easier if that day comes.
 
-## 17. Build for production
+## 18. Build for production
 
 ```bash
 npm run build
 npm start
 ```
 
-## 18. Environment variables
+## 19. Environment variables
 
 See `.env.example` for the full documented list (database, JWT secrets, payment gateway credentials, analytics IDs, contact info). Copy it to `.env` and fill in real values before deploying — the included `.env` has safe local-dev defaults only.

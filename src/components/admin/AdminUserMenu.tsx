@@ -49,7 +49,7 @@ export default function AdminUserMenu({ userName, userRole }: { userName: string
     };
   }, [open]);
 
-  // Same request the previous LogoutButton made — only the presentation changed.
+  // Plain POST to the logout route; the server clears both auth cookies.
   async function handleLogout() {
     setLoggingOut(true);
     try {

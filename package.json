@@ -21,7 +21,8 @@
     "setup": "npm install && npx prisma generate && npx prisma db push && npm run db:seed",
     "user:email": "tsx scripts/set-user-email.ts",
     "db:migrate:deploy": "prisma migrate deploy",
-    "db:migrate:status": "prisma migrate status"
+    "db:migrate:status": "prisma migrate status",
+    "db:backup": "tsx scripts/backup-db.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
