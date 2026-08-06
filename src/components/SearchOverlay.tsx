@@ -105,6 +105,9 @@ export default function SearchOverlay({ label }: { label: string }) {
       setQuery("");
       setResults([]);
     };
+    // hydrateWishlist is a zustand store action, referentially stable across
+    // renders, so adding it to the deps would change nothing but re-running.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -301,6 +304,7 @@ export default function SearchOverlay({ label }: { label: string }) {
                         <input
                           ref={inputRef}
                           role="combobox"
+                          aria-controls="search-results-listbox"
                           aria-expanded={activeList.length > 0}
                           aria-activedescendant={activeIndex >= 0 ? `search-option-${activeIndex}` : undefined}
                           value={query}
@@ -332,7 +336,7 @@ export default function SearchOverlay({ label }: { label: string }) {
                     </button>
                   </div>
 
-                  <div role="listbox" className="max-h-[65vh] overflow-y-auto">
+                  <div role="listbox" id="search-results-listbox" className="max-h-[65vh] overflow-y-auto">
                     {/* Empty query: recent + popular + trending */}
                     {!query.trim() && (
                       <div className="p-6 space-y-7">
