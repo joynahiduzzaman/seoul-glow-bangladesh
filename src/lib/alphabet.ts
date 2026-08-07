@@ -20,3 +20,19 @@ export function filterByInitial<T>(items: T[], active: string, nameOf: (item: T)
   if (active === ALL) return items;
   return items.filter((item) => initialOf(nameOf(item)) === active);
 }
+
+/**
+ * Substring match, case- and accent-insensitive.
+ *
+ * Normalising strips the diacritics in names like "Dr.Jart+" or "Chérie" so a
+ * plain-keyboard search still finds them — typing "cherie" should not fail on a
+ * character the shopper has no key for.
+ */
+const normalise = (value: string) =>
+  value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+export function filterByQuery<T>(items: T[], query: string, nameOf: (item: T) => string): T[] {
+  const q = normalise(query);
+  if (!q) return items;
+  return items.filter((item) => normalise(nameOf(item)).includes(q));
+}
