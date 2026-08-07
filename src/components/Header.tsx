@@ -151,12 +151,15 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
             />
             <MegaMenu
               label={dict.nav.skincare}
-              triggerHref="/shop?category=serum"
+              // Was /shop?category=serum, so the "Skincare" heading opened
+              // serums only, and its "Shop All Skincare" button opened the
+              // unfiltered product grid. Both now open the category directory.
+              triggerHref="/categories"
               links={CATEGORY_LINKS}
               image="https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=500&q=80"
               caption="Build your routine, one step at a time."
-              ctaLabel="Shop All Skincare"
-              ctaHref="/shop"
+              ctaLabel="View All Categories"
+              ctaHref="/categories"
             />
             {NAV_LINKS.map((link) => (
               <Link
@@ -222,7 +225,9 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
             <Link href="/brands" onClick={() => setMenuOpen(false)} className="text-[15px] font-medium text-ink/80 py-3.5">
               {dict.nav.brands}
             </Link>
-            <Link href="/shop?category=serum" onClick={() => setMenuOpen(false)} className="text-[15px] font-medium text-ink/80 py-3.5">
+            {/* Also pointed at serums, so "Skincare" on a phone opened one
+                category rather than the list of them. */}
+            <Link href="/categories" onClick={() => setMenuOpen(false)} className="text-[15px] font-medium text-ink/80 py-3.5">
               {dict.nav.skincare}
             </Link>
             {NAV_LINKS.map((link) => (

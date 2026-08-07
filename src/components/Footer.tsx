@@ -72,6 +72,7 @@ export default async function Footer({ locale, dict }: { locale: Locale; dict: D
             <li><Link href="/shop?filter=new" className="link-tap hover:text-cream transition-colors">New Arrivals</Link></li>
             <li><Link href="/shop?filter=flashsale" className="link-tap hover:text-cream transition-colors">Flash Sale</Link></li>
             <li><Link href="/brands" className="link-tap hover:text-cream transition-colors">All Brands</Link></li>
+            <li><Link href="/categories" className="link-tap hover:text-cream transition-colors">Shop by Category</Link></li>
           </ul>
         </div>
 
