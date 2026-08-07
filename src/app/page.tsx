@@ -75,16 +75,17 @@ const getAllCategories = unstable_cache(
 
 const getAllBrands = unstable_cache(
   async () => {
-    // Pull one in-stock product image per brand alongside the brand itself. The
-    // `logo` column is empty for every brand today (no logo assets uploaded yet),
-    // so a real product shot is the honest way to give each tile a visual —
-    // and it's what Olive Young / Sephora brand tiles actually show anyway.
+    // Every brand now has a logo uploaded, so the tile leads with the mark. One
+    // in-stock product image is still pulled per brand as the fallback visual,
+    // so a newly added brand never renders as an empty tile before its logo
+    // arrives — that is what these tiles showed back when no logos existed.
     const brands = await prisma.brand.findMany({
       select: {
         id: true,
         name: true,
         slug: true,
         logo: true,
+        _count: { select: { products: true } },
         products: {
           where: { status: "ACTIVE", images: { not: "[]" } },
           orderBy: [{ isBestSeller: "desc" }, { createdAt: "desc" }],
@@ -94,8 +95,9 @@ const getAllBrands = unstable_cache(
       },
       orderBy: { name: "asc" },
     });
-    return brands.map(({ products, ...brand }) => ({
+    return brands.map(({ products, _count, ...brand }) => ({
       ...brand,
+      productCount: _count.products,
       image: parseJsonArray(products[0]?.images)[0] ?? null,
     }));
   },

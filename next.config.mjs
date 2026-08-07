@@ -43,12 +43,13 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        // /brands/[slug] pages exist, so users and crawlers naturally truncate
-        // to the parent /brands — which had no page and returned a 404. The
-        // canonical brand index is the Shop page's brand view; point there
-        // permanently rather than adding a duplicate listing to maintain.
-        source: "/brands",
-        destination: "/shop?view=brands",
+        // Superseded by the real /brands directory. That page had never been
+        // built, so this pointed at /shop?view=brands — a parameter nothing in
+        // the codebase ever read, which meant every "Brands" link in the nav and
+        // footer quietly landed on the unfiltered product grid.
+        source: "/shop",
+        has: [{ type: "query", key: "view", value: "brands" }],
+        destination: "/brands",
         permanent: true,
       },
     ];

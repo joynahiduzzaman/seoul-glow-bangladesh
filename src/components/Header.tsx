@@ -139,7 +139,7 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
           <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
             <MegaMenu
               label={dict.nav.brands}
-              triggerHref="/shop?view=brands"
+              triggerHref="/brands"
               links={BRAND_LINKS}
               image="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80"
               caption="Direct from South Korea's most-loved skincare labels."
@@ -216,7 +216,7 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
 
         {menuOpen && (
           <nav className="lg:hidden container-px pb-4 flex flex-col bg-cream divide-y divide-border-soft/70 max-h-[calc(100vh-5rem)] overflow-y-auto animate-fade-up">
-            <Link href="/shop?view=brands" onClick={() => setMenuOpen(false)} className="text-[15px] font-medium text-ink/80 py-3.5">
+            <Link href="/brands" onClick={() => setMenuOpen(false)} className="text-[15px] font-medium text-ink/80 py-3.5">
               {dict.nav.brands}
             </Link>
             <Link href="/shop?category=serum" onClick={() => setMenuOpen(false)} className="text-[15px] font-medium text-ink/80 py-3.5">
