@@ -35,16 +35,15 @@ export default function AlphabetIndex({
 
   return (
     <div className="mb-8 sm:mb-10">
-      {/* A grid, not a wrapped flex row: 26 letters plus a double-width "All" is
-          28 cells, which lands on exactly four rows of seven on a phone and two
-          rows of fourteen from sm up. Flex-wrap gave a ragged 16-then-11 split
-          that read as an accident.
+      {/* 26 letters plus a double-width "All" is 28 cells, so a 14-column grid
+          is exactly two rows at every size. Flex-wrap gave a ragged split, and
+          seven columns on a phone stacked it four rows deep.
           14 columns is past Tailwind's built-in scale, so the track list is
           written out rather than adding a one-off key to the theme. */}
       <div
         role="group"
         aria-label={`Filter ${plural(2)} by first letter`}
-        className="mx-auto grid max-w-4xl grid-cols-7 gap-1.5 rounded-xl2 border border-border-soft bg-white p-2.5 shadow-e1 sm:grid-cols-[repeat(14,minmax(0,1fr))] sm:gap-2 sm:p-3"
+        className="mx-auto grid max-w-4xl grid-cols-[repeat(14,minmax(0,1fr))] gap-0.5 rounded-xl2 border border-rose-gold/20 bg-gradient-to-br from-white via-cream to-soft-pink/40 p-1.5 shadow-e2 sm:gap-2 sm:p-3"
       >
         <IndexButton
           label="All"
@@ -103,16 +102,21 @@ function IndexButton({
       // pressing it does.
       aria-label={srLabel}
       className={[
-        // Cells stretch to the grid track; h-9 keeps every one at 36px, clearing
-        // the 24px minimum touch target with room to spare.
-        "inline-flex h-9 w-full items-center justify-center rounded-lg text-xs font-semibold uppercase tracking-wide transition-all duration-300 ease-silk",
+        // Cells stretch to the grid track. Fourteen across a 320px phone leaves
+        // them narrower than the 24px guideline, so the height carries the tap
+        // target instead — 40px on mobile, easing back to 36px once the row has
+        // room to breathe.
+        "inline-flex h-10 w-full items-center justify-center rounded-lg text-[11px] font-bold uppercase tracking-wide transition-all duration-300 ease-silk sm:h-9 sm:text-xs",
         // "All" takes two tracks so the remaining 26 cells divide evenly.
         wide ? "col-span-2" : "",
         disabled
           ? "cursor-default text-ink/20"
           : active
-            ? "bg-ink text-cream shadow-e1"
-            : "text-ink/65 hover:bg-beige hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-gold",
+            ? // Deep rose rather than the flat ink: cream on #994D4D measures
+              // 5.6:1, where cream on the lighter brand rose-gold would be 2.9
+              // and fail. The gradient stays within the accessible end.
+              "scale-[1.06] bg-gradient-to-br from-rose-gold-text to-[#7D3F3F] text-cream shadow-e2"
+            : "bg-white/70 text-rose-gold-text hover:bg-rose-gold-text hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-gold",
       ].join(" ")}
     >
       {label}
