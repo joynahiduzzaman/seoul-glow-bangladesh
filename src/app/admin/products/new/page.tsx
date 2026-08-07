@@ -1,9 +1,11 @@
 "use client";
 
+import { fetchWithSession } from "@/lib/admin/session-fetch";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import ProductForm, { EMPTY_PRODUCT_FORM, ProductFormValues } from "@/components/admin/ProductForm";
+import ProductForm, { EMPTY_PRODUCT_FORM, ProductFormValues, clearProductDraft } from "@/components/admin/ProductForm";
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -12,7 +14,7 @@ export default function NewProductPage() {
   async function handleSubmit(form: ProductFormValues) {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/products", {
+      const res = await fetchWithSession("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -40,10 +42,20 @@ export default function NewProductPage() {
           batchNumber: form.batchNumber || null,
           texture: form.texture || null,
           expiryDate: form.expiryDate || null,
+          benefits: form.benefits.filter((b) => b.trim()),
+          howToUse: form.howToUse || null,
+          ingredients: form.ingredients || null,
+          skinType: form.skinType,
+          skinConcern: form.skinConcern,
+          warnings: form.warnings || null,
+          countryOfOrigin: form.countryOfOrigin || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      // The product is safely in the database now, so the local copy is no
+      // longer a safety net — leaving it would offer to restore it next time.
+      clearProductDraft();
       toast.success("Product created");
       router.push("/admin/products");
       router.refresh();
@@ -57,7 +69,7 @@ export default function NewProductPage() {
   return (
     <div className="max-w-2xl">
       <h1 className="font-display text-3xl font-semibold mb-8">Add New Product</h1>
-      <ProductForm initialValues={EMPTY_PRODUCT_FORM} submitLabel="Create Product" loading={loading} onSubmit={handleSubmit} />
+      <ProductForm initialValues={EMPTY_PRODUCT_FORM} submitLabel="Create Product" loading={loading} onSubmit={handleSubmit} draftKeyEnabled />
     </div>
   );
 }

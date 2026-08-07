@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/server/auth";
 import { prisma } from "@/server/db";
 import AdminShell from "@/components/admin/AdminShell";
+import SessionKeepAlive from "@/components/admin/SessionKeepAlive";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -30,6 +31,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <AdminShell nav={nav} userName={user?.name || ""} userRole={user?.role || ""}>
+      {/* Mounted for the whole panel, not only the product form: any admin
+          screen can sit open past the access token's fifteen minutes. */}
+      <SessionKeepAlive />
       {children}
     </AdminShell>
   );

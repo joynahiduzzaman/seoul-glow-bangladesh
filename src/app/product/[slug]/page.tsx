@@ -14,7 +14,7 @@ import RecordRecentlyViewed from "@/components/RecordRecentlyViewed";
 import RecentlyViewedRail from "@/components/RecentlyViewedRail";
 import FrequentlyBoughtTogether from "@/components/FrequentlyBoughtTogether";
 import ProductFaq from "@/components/ProductFaq";
-import { Star, ShieldCheck, Droplet, Target } from "lucide-react";
+import { Star, ShieldCheck, Droplet, Target, AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { ROUTINE_STEPS } from "@/lib/routine";
@@ -244,6 +244,24 @@ export default async function ProductPage({ params }: { params: { slug: string }
       )}
 
       <IngredientHighlights ingredients={ingredientList} />
+
+      {/* Warnings were stored on the model but never shown anywhere. For
+          skincare that is the one field a customer with sensitive skin or an
+          allergy actually looks for, so it sits directly under the ingredients
+          rather than in a footnote. */}
+      {product.warnings && (
+        <section className="mt-10 md:mt-14">
+          <div className="mx-auto flex max-w-3xl items-start gap-3.5 rounded-xl2 border border-gold/25 bg-gold/[0.06] px-5 py-4 sm:px-6">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold-text" aria-hidden="true">
+              <AlertTriangle size={15} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-ink/70">Before you use it</h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-body">{product.warnings}</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Authenticity verification */}
       <section className="mt-14 md:mt-20 max-w-2xl mx-auto">

@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchWithSession } from "@/lib/admin/session-fetch";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -52,6 +54,13 @@ export default function ProductDrawer({ state, onClose }: { state: DrawerState; 
             isTrending: p.isTrending,
             batchNumber: p.batchNumber || "",
             texture: p.texture || "",
+          benefits: parseJsonArray(p.benefits),
+          howToUse: p.howToUse || "",
+          ingredients: p.ingredients || "",
+          skinType: parseJsonArray(p.skinType),
+          skinConcern: parseJsonArray(p.skinConcern),
+          warnings: p.warnings || "",
+          countryOfOrigin: p.countryOfOrigin || "South Korea",
             expiryDate: p.expiryDate ? String(p.expiryDate).slice(0, 10) : "",
           });
         })
@@ -92,9 +101,16 @@ export default function ProductDrawer({ state, onClose }: { state: DrawerState; 
         batchNumber: form.batchNumber || null,
         texture: form.texture || null,
         expiryDate: form.expiryDate || null,
+        benefits: form.benefits.filter((b) => b.trim()),
+        howToUse: form.howToUse || null,
+        ingredients: form.ingredients || null,
+        skinType: form.skinType,
+        skinConcern: form.skinConcern,
+        warnings: form.warnings || null,
+        countryOfOrigin: form.countryOfOrigin || undefined,
       };
       const isEdit = state.mode === "edit";
-      const res = await fetch(isEdit ? `/api/admin/products/${state.productId}` : "/api/admin/products", {
+      const res = await fetchWithSession(isEdit ? `/api/admin/products/${state.productId}` : "/api/admin/products", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

@@ -37,6 +37,16 @@ const updateSchema = z.object({
   isTrending: z.boolean().optional(),
   batchNumber: z.string().max(40).nullable().optional(),
   texture: z.enum(PRODUCT_TEXTURES).nullable().optional(),
+  // Long-standing Product columns that the admin form never exposed. Arrays are
+  // stored as JSON strings to keep the schema database-agnostic, exactly as
+  // images and skinType already were.
+  benefits: z.array(z.string().trim().min(1).max(80)).max(12).optional(),
+  howToUse: z.string().max(2000).nullable().optional(),
+  ingredients: z.string().max(4000).nullable().optional(),
+  skinType: z.array(z.string().max(40)).max(12).optional(),
+  skinConcern: z.array(z.string().max(40)).max(12).optional(),
+  warnings: z.string().max(1000).nullable().optional(),
+  countryOfOrigin: z.string().max(60).optional(),
   expiryDate: z.coerce.date().nullable().optional(),
 });
 
@@ -59,6 +69,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const data: any = { ...parsed.data };
   if (data.images) data.images = JSON.stringify(data.images);
+  // JSON string columns, like images above. Checked against undefined rather
+  // than truthiness so clearing a list to [] is saved rather than ignored.
+  if (data.benefits !== undefined) {
+    data.benefits = JSON.stringify((data.benefits as string[]).filter((b) => b.trim()));
+  }
+  if (data.skinType !== undefined) data.skinType = JSON.stringify(data.skinType);
+  if (data.skinConcern !== undefined) data.skinConcern = JSON.stringify(data.skinConcern);
 
   if (data.slug) {
     const clash = await prisma.product.findFirst({ where: { slug: data.slug, NOT: { id: params.id } } });

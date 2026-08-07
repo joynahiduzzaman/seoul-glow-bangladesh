@@ -36,6 +36,16 @@ const productSchema = z.object({
   isTrending: z.boolean().default(false),
   batchNumber: z.string().max(40).nullable().optional(),
   texture: z.enum(PRODUCT_TEXTURES).nullable().optional(),
+  // Long-standing Product columns that the admin form never exposed. Arrays are
+  // stored as JSON strings to keep the schema database-agnostic, exactly as
+  // images and skinType already were.
+  benefits: z.array(z.string().trim().min(1).max(80)).max(12).optional(),
+  howToUse: z.string().max(2000).nullable().optional(),
+  ingredients: z.string().max(4000).nullable().optional(),
+  skinType: z.array(z.string().max(40)).max(12).optional(),
+  skinConcern: z.array(z.string().max(40)).max(12).optional(),
+  warnings: z.string().max(1000).nullable().optional(),
+  countryOfOrigin: z.string().max(60).optional(),
   // yyyy-mm-dd from <input type="date">; z.coerce.date() turns it into a real Date for Prisma.
   expiryDate: z.coerce.date().nullable().optional(),
 });
@@ -77,14 +87,19 @@ export async function POST(req: NextRequest) {
     if (clash) return NextResponse.json({ error: "That SKU is already in use by another product" }, { status: 409 });
   }
 
+  // These three were pinned to "[]" here, so even once the form sent them the
+  // values would have been thrown away on the way in. They are JSON string
+  // columns, so each is serialised the same way images already is.
+  const { benefits, skinType, skinConcern, ...rest } = data;
+
   const product = await prisma.product.create({
     data: {
-      ...data,
+      ...rest,
       slug,
       images: JSON.stringify(images),
-      skinType: "[]",
-      skinConcern: "[]",
-      benefits: "[]",
+      skinType: JSON.stringify(skinType ?? []),
+      skinConcern: JSON.stringify(skinConcern ?? []),
+      benefits: JSON.stringify((benefits ?? []).filter((b) => b.trim())),
     },
   });
   return NextResponse.json({ product }, { status: 201 });

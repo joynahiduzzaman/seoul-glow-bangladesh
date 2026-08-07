@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchWithSession } from "@/lib/admin/session-fetch";
+
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import toast from "react-hot-toast";
@@ -49,6 +51,13 @@ export default function EditProductPage() {
           isTrending: p.isTrending,
           batchNumber: p.batchNumber || "",
           texture: p.texture || "",
+          benefits: parseJsonArray(p.benefits),
+          howToUse: p.howToUse || "",
+          ingredients: p.ingredients || "",
+          skinType: parseJsonArray(p.skinType),
+          skinConcern: parseJsonArray(p.skinConcern),
+          warnings: p.warnings || "",
+          countryOfOrigin: p.countryOfOrigin || "South Korea",
           // Prisma returns a Date (serialized as an ISO string over JSON) — the
           // <input type="date"> needs just the yyyy-mm-dd portion.
           expiryDate: p.expiryDate ? String(p.expiryDate).slice(0, 10) : "",
@@ -61,7 +70,7 @@ export default function EditProductPage() {
   async function handleSubmit(form: ProductFormValues) {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/products/${productId}`, {
+      const res = await fetchWithSession(`/api/admin/products/${productId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -89,6 +98,13 @@ export default function EditProductPage() {
           batchNumber: form.batchNumber || null,
           texture: form.texture || null,
           expiryDate: form.expiryDate || null,
+          benefits: form.benefits.filter((b) => b.trim()),
+          howToUse: form.howToUse || null,
+          ingredients: form.ingredients || null,
+          skinType: form.skinType,
+          skinConcern: form.skinConcern,
+          warnings: form.warnings || null,
+          countryOfOrigin: form.countryOfOrigin || undefined,
         }),
       });
       const data = await res.json();

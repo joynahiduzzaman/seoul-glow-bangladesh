@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import ImageUploadField from "./ImageUploadField";
+import { X, Plus } from "lucide-react";
 import { PRODUCT_TEXTURES, PRODUCT_TEXTURE_LABELS, type ProductTexture } from "@/lib/product-texture";
+import { SKIN_TYPES, SKIN_CONCERNS } from "@/lib/product-attributes";
 
 export interface ProductFormValues {
   name: string;
@@ -29,6 +31,17 @@ export interface ProductFormValues {
   batchNumber: string;
   expiryDate: string; // yyyy-mm-dd, matches <input type="date">
   texture: ProductTexture | "";
+  // Every one of these already existed on the Product model and already renders
+  // on the product page. Only the form was missing them, so there was no way to
+  // give a product benefits, usage steps or an ingredient list from the admin
+  // panel — which is why those sections were empty for every product.
+  benefits: string[];
+  howToUse: string;
+  ingredients: string;
+  skinType: string[];
+  skinConcern: string[];
+  warnings: string;
+  countryOfOrigin: string;
 }
 
 export const EMPTY_PRODUCT_FORM: ProductFormValues = {
@@ -56,10 +69,166 @@ export const EMPTY_PRODUCT_FORM: ProductFormValues = {
   batchNumber: "",
   expiryDate: "",
   texture: "",
+  benefits: [],
+  howToUse: "",
+  ingredients: "",
+  skinType: [],
+  skinConcern: [],
+  warnings: "",
+  // The model defaults to this and the storefront prints it in the
+  // authenticity block, so the form should start where the catalogue does.
+  countryOfOrigin: "South Korea",
 };
 
 function slugify(input: string) {
   return input.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
+}
+
+/**
+ * Repeatable single-line list, for values the model stores as a JSON array.
+ *
+ * Benefits are rendered on the product page as individual icon marks, so they
+ * have to arrive as separate strings — a textarea split on newlines would look
+ * the same in the form and then break the moment someone typed a wrapped line.
+ */
+function ListField({
+  label,
+  hint,
+  values,
+  onChange,
+  placeholder,
+  addLabel,
+}: {
+  label: string;
+  hint?: string;
+  values: string[];
+  onChange: (next: string[]) => void;
+  placeholder: string;
+  addLabel: string;
+}) {
+  const rows = values.length > 0 ? values : [""];
+
+  const setAt = (i: number, value: string) => {
+    const next = [...rows];
+    next[i] = value;
+    onChange(next);
+  };
+
+  return (
+    <div>
+      <span className="field-label">{label}</span>
+      {hint && <p className="-mt-1 mb-2 text-xs text-ink/60">{hint}</p>}
+      <div className="space-y-2">
+        {rows.map((value, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              value={value}
+              placeholder={placeholder}
+              onChange={(e) => setAt(i, e.target.value)}
+              aria-label={`${label} ${i + 1}`}
+              className="field !py-2.5"
+            />
+            <button
+              type="button"
+              onClick={() => onChange(rows.filter((_, j) => j !== i))}
+              // Kept enabled on the last row so a single stray entry can be
+              // cleared; the empty row simply reappears.
+              aria-label={`Remove ${label} ${i + 1}`}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ink/10 text-ink/45 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+            >
+              <X size={15} aria-hidden="true" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange([...rows, ""])}
+        className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-rose-gold-text transition-colors hover:text-ink"
+      >
+        <Plus size={13} aria-hidden="true" /> {addLabel}
+      </button>
+    </div>
+  );
+}
+
+/** Fixed-vocabulary multi-select. Free text here would create values that the
+ *  product page's filter chips never match. */
+function ChipField({
+  label,
+  hint,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  options: readonly string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  return (
+    <div>
+      <span className="field-label">{label}</span>
+      {hint && <p className="-mt-1 mb-2 text-xs text-ink/60">{hint}</p>}
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const on = selected.includes(option);
+          return (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onChange(on ? selected.filter((s) => s !== option) : [...selected, option])}
+              className={`min-h-[36px] rounded-full border px-3.5 text-xs font-medium transition-colors ${
+                on
+                  ? "border-rose-gold bg-rose-gold/10 text-rose-gold-text"
+                  : "border-ink/12 text-ink/65 hover:border-ink/25 hover:text-ink"
+              }`}
+            >
+              {option}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Local draft of an in-progress product.
+ *
+ * Belt to the session keep-alive's braces. Even with the token refreshing in
+ * the background a save can still fail — the network drops, the tab is closed
+ * by accident, the browser is restarted — and a product with a description, an
+ * ingredient list and a set of benefits represents fifteen or twenty minutes of
+ * typing. Losing that silently was the worst part of this bug.
+ *
+ * localStorage rather than a draft row: it survives a crashed tab and a dead
+ * session equally, needs no schema change, and never leaves half-finished
+ * products in the catalogue. Cleared as soon as the product actually saves.
+ */
+const DRAFT_KEY = "seoul-glow-admin-product-draft";
+const DRAFT_DEBOUNCE_MS = 1200;
+
+function readDraft(): { values: ProductFormValues; savedAt: number } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.values ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearProductDraft() {
+  try {
+    window.localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* private mode or storage disabled — nothing to clear */
+  }
 }
 
 function FormSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
@@ -153,17 +322,24 @@ export default function ProductForm({
   submitLabel,
   loading,
   onSubmit,
+  draftKeyEnabled = false,
 }: {
   initialValues: ProductFormValues;
   submitLabel: string;
   loading: boolean;
   onSubmit: (values: ProductFormValues) => void;
+  /** Drafts are only kept for new products — an edit already has a saved
+   *  record to fall back on, and restoring a stale draft over a live product
+   *  would be worse than losing it. */
+  draftKeyEnabled?: boolean;
 }) {
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState<ProductFormValues>(initialValues);
   const [slugTouched, setSlugTouched] = useState(Boolean(initialValues.slug));
   const [errors, setErrors] = useState<string[]>([]);
+  const [draft, setDraft] = useState<{ values: ProductFormValues; savedAt: number } | null>(null);
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/meta").then((r) => r.json()).then((d) => {
@@ -171,6 +347,31 @@ export default function ProductForm({
       setCategories(d.categories);
     });
   }, []);
+
+  // Offer to restore rather than restoring silently: quietly repopulating a
+  // form with work from a previous session is disorienting, and the admin may
+  // have moved on deliberately.
+  useEffect(() => {
+    if (!draftKeyEnabled) return;
+    const found = readDraft();
+    if (found && found.values.name?.trim()) setDraft(found);
+  }, [draftKeyEnabled]);
+
+  // Debounced so a fast typist is not writing to storage on every keystroke.
+  useEffect(() => {
+    if (!draftKeyEnabled) return;
+    const dirty = form.name.trim() || form.description.trim() || form.images.length > 0;
+    if (!dirty) return;
+    const timer = setTimeout(() => {
+      try {
+        window.localStorage.setItem(DRAFT_KEY, JSON.stringify({ values: form, savedAt: Date.now() }));
+        setDraftSavedAt(Date.now());
+      } catch {
+        /* storage full or disabled — the form still works, just without a net */
+      }
+    }, DRAFT_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [form, draftKeyEnabled]);
 
   // Re-sync if the parent hands us different initial values later (e.g. the edit
   // page finishes fetching the product after this component has already mounted).
@@ -228,6 +429,36 @@ export default function ProductForm({
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-xl2 shadow-soft p-6 space-y-6">
+      {draft && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-rose-gold/25 bg-rose-gold/[0.06] p-3.5 text-xs">
+          <span className="flex-1 text-ink/75">
+            An unsaved draft of <strong className="text-ink">{draft.values.name || "a product"}</strong> was found from{" "}
+            {new Date(draft.savedAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setForm(draft.values);
+              setSlugTouched(Boolean(draft.values.slug));
+              setDraft(null);
+            }}
+            className="rounded-full bg-ink px-3.5 py-1.5 font-semibold text-cream"
+          >
+            Restore it
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              clearProductDraft();
+              setDraft(null);
+            }}
+            className="font-semibold text-ink/50 hover:text-ink"
+          >
+            Discard
+          </button>
+        </div>
+      )}
+
       {errors.length > 0 && (
         <div className="rounded-lg bg-badge-sale/10 border border-badge-sale/20 p-3.5 text-xs text-badge-sale space-y-1">
           {errors.map((e) => <p key={e}>• {e}</p>)}
@@ -282,6 +513,82 @@ export default function ProductForm({
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={4}
             className="field resize-y"
+          />
+        </Field>
+      </FormSection>
+
+      <FormSection
+        title="Product Details"
+        description="Everything below already has a place on the product page — benefits appear as icon marks, the ritual block reads the usage steps, and the ingredient list is split into featured actives and the rest."
+      >
+        <ListField
+          label="Key Benefits"
+          hint="One claim per line, in the customer's words — “Brightens dark spots”, “No white cast”."
+          values={form.benefits}
+          onChange={(benefits) => setForm({ ...form, benefits })}
+          placeholder="e.g. Brightens dark spots"
+          addLabel="Add another benefit"
+        />
+
+        <Field label="How to Use" hint="Numbered or plain steps. Shown in the ritual block beside a product photo." htmlFor="howToUse">
+          <textarea
+            id="howToUse"
+            placeholder={"1. Apply to clean, dry skin morning and night.\n2. Pat gently until absorbed.\n3. Follow with moisturiser."}
+            value={form.howToUse}
+            onChange={(e) => setForm({ ...form, howToUse: e.target.value })}
+            rows={4}
+            className="field resize-y"
+          />
+        </Field>
+
+        <Field
+          label="Ingredients"
+          hint="Full INCI list, comma separated. Recognised actives are featured with what they do; the rest are listed by name."
+          htmlFor="ingredients"
+        >
+          <textarea
+            id="ingredients"
+            placeholder="Water, Glycerin, Niacinamide, Centella Asiatica Extract, Panthenol…"
+            value={form.ingredients}
+            onChange={(e) => setForm({ ...form, ingredients: e.target.value })}
+            rows={4}
+            className="field resize-y"
+          />
+        </Field>
+
+        <ChipField
+          label="Suitable for"
+          hint="Shown as filter chips on the product page."
+          options={SKIN_TYPES}
+          selected={form.skinType}
+          onChange={(skinType) => setForm({ ...form, skinType })}
+        />
+
+        <ChipField
+          label="Targets these concerns"
+          options={SKIN_CONCERNS}
+          selected={form.skinConcern}
+          onChange={(skinConcern) => setForm({ ...form, skinConcern })}
+        />
+
+        <Field label="Warnings & precautions" hint="Patch-test advice, sun sensitivity, what to avoid combining it with." htmlFor="warnings">
+          <textarea
+            id="warnings"
+            placeholder="e.g. Patch-test before first use. Use sunscreen daily when using this product."
+            value={form.warnings}
+            onChange={(e) => setForm({ ...form, warnings: e.target.value })}
+            rows={2}
+            className="field resize-y"
+          />
+        </Field>
+
+        <Field label="Country of Origin" hint="Printed in the authenticity block alongside the batch number." htmlFor="countryOfOrigin">
+          <input
+            id="countryOfOrigin"
+            value={form.countryOfOrigin}
+            onChange={(e) => setForm({ ...form, countryOfOrigin: e.target.value })}
+            placeholder="South Korea"
+            className="field"
           />
         </Field>
       </FormSection>
@@ -555,7 +862,18 @@ export default function ProductForm({
         </Field>
       </FormSection>
 
-      <button disabled={loading} className="btn-primary w-full">{loading ? "Saving…" : submitLabel}</button>
+      <div>
+        <button disabled={loading} className="btn-primary w-full">{loading ? "Saving…" : submitLabel}</button>
+        {draftKeyEnabled && draftSavedAt && (
+          // Visible reassurance that the work is recoverable — the point of the
+          // draft is lost if nobody knows it exists.
+          <p className="mt-2 text-center text-[11px] text-ink/45">
+            Draft saved locally at{" "}
+            {new Date(draftSavedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} — it will be
+            restored if this page is closed before saving.
+          </p>
+        )}
+      </div>
     </form>
   );
 }
