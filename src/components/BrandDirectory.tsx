@@ -55,7 +55,7 @@ export default function BrandDirectory({ brands }: { brands: BrandCardItem[] }) 
           aria-label="Filter brands by first letter"
           // 14 columns is past Tailwind's built-in scale, so the track list is
           // written out rather than adding a one-off key to the theme.
-          className="mx-auto grid max-w-3xl grid-cols-7 gap-1.5 rounded-xl2 border border-border-soft bg-white/70 p-2.5 shadow-e1 sm:grid-cols-[repeat(14,minmax(0,1fr))] sm:gap-2 sm:p-3"
+          className="mx-auto grid max-w-4xl grid-cols-7 gap-1.5 rounded-xl2 border border-border-soft bg-white p-2.5 shadow-e1 sm:grid-cols-[repeat(14,minmax(0,1fr))] sm:gap-2 sm:p-3"
         >
           <FilterButton
             label="All"

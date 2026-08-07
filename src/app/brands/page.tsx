@@ -50,8 +50,11 @@ export default async function BrandsPage() {
       <section className="border-b border-border-soft bg-gradient-to-b from-beige/70 via-cream to-cream">
         {/* Kept short on a phone: at the full section rhythm this masthead filled
             the entire first screen and not one brand was visible without
-            scrolling, which defeats the point of a directory. */}
-        <div className="container-px mx-auto py-10 text-center sm:py-16 lg:py-20">
+            scrolling, which defeats the point of a directory.
+            The bottom padding is also deliberately smaller than the top — paired
+            with the section below it was leaving a 145px empty band around the
+            divider, which read as a gap rather than a break. */}
+        <div className="container-px mx-auto pb-9 pt-10 text-center sm:pb-12 sm:pt-16 lg:pb-14 lg:pt-20">
           <p className="eyebrow mb-3">Authorised Korean Labels</p>
           <h1 className="section-title mx-auto max-w-2xl break-words">Our Korean Beauty Brands</h1>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-body sm:text-[15px]">
@@ -70,7 +73,12 @@ export default async function BrandsPage() {
       </section>
 
       {/* ── Directory ─────────────────────────────────────────────────────── */}
-      <section className="container-px mx-auto py-12 sm:py-16">
+      {/* Less padding above than below: the index belongs to the grid it filters,
+          so it sits nearer the divider than the footer does. */}
+      {/* Bottom padding is deliberately small: the footer already carries a
+          global mt-16/mt-24, and a full pb here stacked on top of it left ~176px
+          of empty page between the last control and the footer. */}
+      <section className="container-px mx-auto pb-6 pt-9 sm:pb-8 sm:pt-11">
         {items.length === 0 ? (
           <p className="py-20 text-center text-body">No brands have been added yet.</p>
         ) : (
@@ -78,7 +86,9 @@ export default async function BrandsPage() {
         )}
 
         {stocked.length > 0 && (
-          <div className="mt-12 text-center sm:mt-16">
+          // A wider gap than anything inside the directory: this is a way out of
+          // the page, not part of it.
+          <div className="mt-14 border-t border-border-soft pt-10 text-center sm:mt-20 sm:pt-12">
             <p className="text-sm text-body">Prefer to browse everything at once?</p>
             <Link
               href="/shop"
