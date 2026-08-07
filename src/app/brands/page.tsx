@@ -32,7 +32,6 @@ export default async function BrandsPage() {
   });
 
   const stocked = brands.filter((b) => b._count.products > 0);
-  const totalProducts = brands.reduce((n, b) => n + b._count.products, 0);
 
   const items = brands.map((b) => ({
     id: b.id,
@@ -46,39 +45,16 @@ export default async function BrandsPage() {
 
   return (
     <div className="bg-cream">
-      {/* ── Masthead ──────────────────────────────────────────────────────── */}
-      <section className="border-b border-border-soft bg-gradient-to-b from-beige/70 via-cream to-cream">
-        {/* Kept short on a phone: at the full section rhythm this masthead filled
-            the entire first screen and not one brand was visible without
-            scrolling, which defeats the point of a directory.
-            The bottom padding is also deliberately smaller than the top — paired
-            with the section below it was leaving a 145px empty band around the
-            divider, which read as a gap rather than a break. */}
-        <div className="container-px mx-auto pb-9 pt-10 text-center sm:pb-12 sm:pt-16 lg:pb-14 lg:pt-20">
-          <p className="eyebrow mb-3">Authorised Korean Labels</p>
-          <h1 className="section-title mx-auto max-w-2xl break-words">Our Korean Beauty Brands</h1>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-body sm:text-[15px]">
-            Every label we stock, imported directly from South Korea and batch-verified — never grey-market.
-            Choose a brand to see its full range.
-          </p>
-
-          {/* gap-x-5 on mobile so all three sit on one line at 320px; at gap-x-8
-              they needed 292px of a 288px row and broke 2-then-1. */}
-          <dl className="mx-auto mt-7 flex max-w-md items-start justify-center gap-x-5 sm:mt-8 sm:gap-x-12">
-            <Stat value={brands.length} label={brands.length === 1 ? "Brand" : "Brands"} />
-            <Stat value={totalProducts} label={totalProducts === 1 ? "Product" : "Products"} />
-            <Stat value="100%" label="Authentic" />
-          </dl>
-        </div>
-      </section>
+      {/* The page still needs one h1: it is the document's heading for screen
+          readers and the target search engines pair with the title and canonical
+          on this route. The visual masthead was removed, not the heading. */}
+      <h1 className="sr-only">Our Korean Beauty Brands</h1>
 
       {/* ── Directory ─────────────────────────────────────────────────────── */}
-      {/* Less padding above than below: the index belongs to the grid it filters,
-          so it sits nearer the divider than the footer does. */}
       {/* Bottom padding is deliberately small: the footer already carries a
           global mt-16/mt-24, and a full pb here stacked on top of it left ~176px
           of empty page between the last control and the footer. */}
-      <section className="container-px mx-auto pb-6 pt-9 sm:pb-8 sm:pt-11">
+      <section className="container-px mx-auto pb-6 pt-10 sm:pb-8 sm:pt-14">
         {items.length === 0 ? (
           <p className="py-20 text-center text-body">No brands have been added yet.</p>
         ) : (
@@ -103,17 +79,4 @@ export default async function BrandsPage() {
   );
 }
 
-function Stat({ value, label }: { value: string | number; label: string }) {
-  return (
-    <div className="text-center">
-      <dt className="sr-only">{label}</dt>
-      <dd>
-        <span className="block font-display text-2xl font-semibold text-ink sm:text-3xl">{value}</span>
-        <span className="mt-0.5 block whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.1em] text-ink/50 sm:text-[11px] sm:tracking-[0.18em]">
-          {label}
-        </span>
-      </dd>
-    </div>
-  );
-}
 
