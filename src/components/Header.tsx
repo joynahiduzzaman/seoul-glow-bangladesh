@@ -82,7 +82,7 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
         // rest in client state.
         setUser(
           d.user
-            ? { id: d.user.id, name: d.user.name, email: d.user.email, role: d.user.role, image: d.user.image ?? null }
+            ? { id: d.user.id, name: d.user.name, email: d.user.email, role: d.user.role }
             : null
         );
       })

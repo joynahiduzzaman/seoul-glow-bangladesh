@@ -12,8 +12,6 @@ export interface SessionUser {
   name: string;
   email: string;
   role: string;
-  /** Present once a profile photo is on file; social accounts supply one. */
-  image?: string | null;
 }
 
 const LINKS = [
@@ -90,7 +88,7 @@ export default function AccountMenu({ user }: { user: SessionUser }) {
         // any taller. The name only appears where there is room for it.
         className="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 transition-colors hover:bg-beige/70 lg:pr-2.5"
       >
-        <UserAvatar name={user.name} email={user.email} image={user.image} size={32} />
+        <UserAvatar name={user.name} email={user.email} size={32} />
         <span className="hidden max-w-[7rem] truncate text-sm font-medium text-ink lg:block">{firstName}</span>
         <ChevronDown
           size={14}
@@ -113,7 +111,7 @@ export default function AccountMenu({ user }: { user: SessionUser }) {
             className="absolute right-3 sm:right-0 z-50 mt-2 w-[min(16rem,calc(100vw-1.5rem))] origin-top-right overflow-hidden rounded-xl2 border border-border-soft bg-white shadow-e4"
           >
             <div className="flex items-center gap-3 border-b border-border-soft bg-gradient-to-br from-beige/60 to-soft-pink/30 px-4 py-3.5">
-              <UserAvatar name={user.name} email={user.email} image={user.image} size={40} />
+              <UserAvatar name={user.name} email={user.email} size={40} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold leading-tight text-ink">{user.name}</p>
                 <p className="truncate text-xs leading-tight text-body">{user.email}</p>
