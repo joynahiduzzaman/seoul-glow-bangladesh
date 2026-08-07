@@ -141,6 +141,33 @@ function HeroSideCaption() {
   );
 }
 
+/**
+ * Renders a headline, italicising any run wrapped in asterisks.
+ *
+ * The retired default headline set one phrase in italic rose-gold — "Your skin,
+ * *glowing* the Korean way." Custom copy needs the same device available or it
+ * cannot match the styling it replaced, and the alternative would have been a
+ * new column to hold the emphasised phrase separately. `*like this*` costs
+ * nothing, needs no schema change, and degrades to plain text when unused.
+ *
+ * Text between markers is still rendered as text by React, so nothing here can
+ * inject markup.
+ */
+function renderEmphasis(text: string) {
+  const parts = text.split(/\*([^*]+)\*/g);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) =>
+    // Odd indices are the captured groups — the emphasised runs.
+    i % 2 === 1 ? (
+      <span key={i} className="italic text-rose-gold-light">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+}
+
 /** The hero's copy column — one component so the carousel and the site-default
  * hero can never drift apart typographically. */
 function HeroCopy({
@@ -162,30 +189,49 @@ function HeroCopy({
   secondaryUrl?: string;
   showSecondary?: boolean;
 }) {
+  // Whitespace-only copy counts as absent: an admin clearing a field often
+  // leaves a stray space behind, and that must not reserve a headline's worth
+  // of vertical space for nothing.
+  const hasTitle = Boolean(title && title.trim());
+  const hasSubtitle = Boolean(subtitle && subtitle.trim());
+
   return (
     <>
       <HeroEyebrow>100% Authentic · Direct from Seoul</HeroEyebrow>
 
-      {/* Type scale steps deliberately: the headline is the only element allowed
-          to be loud. Tight tracking + near-1.0 leading is what separates an
-          editorial display setting from a large default web heading. */}
-      <h1 className="font-display text-[2.85rem] sm:text-6xl lg:text-[4.4rem] xl:text-[5.25rem] font-semibold leading-[0.98] tracking-[-0.025em] text-white [text-wrap:balance] [text-shadow:0_2px_28px_rgba(47,42,40,0.45)]">
-        {title || (
-          <>
-            {dict.home.heroTitleA}{" "}
-            <span className="italic text-rose-gold-light">{dict.home.heroTitleB}</span>{" "}
-            {dict.home.heroTitleC}
-          </>
-        )}
-      </h1>
+      {/* The built-in headline and standfirst are switched off: with no text
+          configured the hero is image-led, and nothing is written on top of it.
+          Both still render the moment a slide supplies them, through exactly the
+          same markup and classes as before — so custom copy is typeset
+          identically to the wording this replaced, including the emphasised
+          middle phrase below.
+          To bring the site defaults back, restore `|| dict.home.heroTitleA/B/C`
+          and `|| dict.home.heroDesc` here; the strings are untouched in
+          lib/i18n/dictionaries.ts. */}
+      {hasTitle && (
+        // Type scale steps deliberately: the headline is the only element
+        // allowed to be loud. Tight tracking + near-1.0 leading is what
+        // separates an editorial display setting from a large default web
+        // heading.
+        <h1 className="font-display text-[2.85rem] sm:text-6xl lg:text-[4.4rem] xl:text-[5.25rem] font-semibold leading-[0.98] tracking-[-0.025em] text-white [text-wrap:balance] [text-shadow:0_2px_28px_rgba(47,42,40,0.45)]">
+          {renderEmphasis(title!)}
+        </h1>
+      )}
 
       {/* Hairline between headline and supporting copy — a quiet editorial beat
-          that stops the block reading as one undifferentiated stack of text. */}
-      <span className="mt-7 h-px w-16 bg-white/25" aria-hidden="true" />
+          that stops the block reading as one undifferentiated stack of text.
+          Only earns its place when there is something on both sides of it. */}
+      {hasTitle && hasSubtitle && <span className="mt-7 h-px w-16 bg-white/25" aria-hidden="true" />}
 
-      <p className="mt-6 max-w-[34ch] text-[15px] leading-[1.75] text-white/70 sm:text-base">
-        {subtitle || dict.home.heroDesc}
-      </p>
+      {hasSubtitle && (
+        <p
+          className={`max-w-[34ch] text-[15px] leading-[1.75] text-white/70 sm:text-base ${
+            hasTitle ? "mt-6" : "mt-7"
+          }`}
+        >
+          {subtitle}
+        </p>
+      )}
 
       <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
         <Link href={primaryUrl || "/shop"} className="btn-primary px-9">

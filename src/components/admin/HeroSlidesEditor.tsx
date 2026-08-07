@@ -145,8 +145,14 @@ export default function HeroSlidesEditor({
                     <SingleImageUpload label="Mobile image (optional)" value={slide.mobileImage} onChange={(url) => updateSlide(slide.id, { mobileImage: url })} aspect={3 / 4} maxDimension={1600} />
                   </div>
                   <input placeholder="Alt text (for accessibility)" value={slide.altText} onChange={(e) => updateSlide(slide.id, { altText: e.target.value })} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
-                  <input placeholder="Title (leave blank for site default)" value={slide.title} onChange={(e) => updateSlide(slide.id, { title: e.target.value })} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
-                  <textarea placeholder="Subtitle (leave blank for site default)" rows={2} value={slide.subtitle} onChange={(e) => updateSlide(slide.id, { subtitle: e.target.value })} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
+                  {/* The placeholders used to promise a "site default" that no
+                      longer exists — blank now means the hero shows the image
+                      with no headline over it. */}
+                  <input placeholder="Headline (leave blank for no headline)" value={slide.title} onChange={(e) => updateSlide(slide.id, { title: e.target.value })} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
+                  <p className="-mt-1 text-[11px] leading-relaxed text-ink/50">
+                    Wrap a phrase in asterisks to set it in italic rose — e.g. Your skin, *glowing* the Korean way.
+                  </p>
+                  <textarea placeholder="Supporting line (leave blank for none)" rows={2} value={slide.subtitle} onChange={(e) => updateSlide(slide.id, { subtitle: e.target.value })} className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
                   <div className="grid grid-cols-2 gap-3">
                     <input placeholder="Primary button text" value={slide.primaryButtonText} onChange={(e) => updateSlide(slide.id, { primaryButtonText: e.target.value })} className="rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
                     <input placeholder="Primary button URL" value={slide.primaryButtonUrl} onChange={(e) => updateSlide(slide.id, { primaryButtonUrl: e.target.value })} className="rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
