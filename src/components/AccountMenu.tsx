@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { User, Package, Heart, Settings, MapPin, LogOut, Loader2, ShieldCheck, ChevronDown } from "lucide-react";
 import UserAvatar from "./UserAvatar";
@@ -34,7 +34,6 @@ export default function AccountMenu({ user }: { user: SessionUser }) {
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => setOpen(false), [pathname]);
@@ -65,9 +64,17 @@ export default function AccountMenu({ user }: { user: SessionUser }) {
       // The existing route clears both auth cookies server-side.
       await fetch("/api/auth/logout", { method: "POST" });
       setOpen(false);
-      router.push("/");
-      router.refresh();
-    } finally {
+      // A full navigation, not router.push. The header reads the session on
+      // pathname change, and pushing "/" from "/" changes no pathname — so
+      // logging out from the homepage cleared the cookies but left the avatar
+      // and bell on screen until something else navigated, which reads as the
+      // logout having failed. Reloading also drops every cached RSC payload
+      // rendered for the signed-in user rather than leaving them one back
+      // button away.
+      window.location.assign("/");
+    } catch {
+      // Only reached if the request itself failed; the button must not stay
+      // stuck on "Signing out…" in that case.
       setLoggingOut(false);
     }
   }
