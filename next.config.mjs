@@ -13,7 +13,13 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""} https://www.googletagmanager.com https://connect.facebook.net https://analytics.tiktok.com`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https:",
+  // blob: is required by the admin image fields. They show the picked file via
+  // URL.createObjectURL while the upload is still in flight, and without blob:
+  // the browser blocks that preview outright — the tile stays empty until the
+  // round trip finishes, which is precisely the "did my image upload?" doubt the
+  // preview exists to remove. A blob: URL is an object the page itself created,
+  // so this grants no ability to load anything remote.
+  "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://www.google-analytics.com https://analytics.tiktok.com https://connect.facebook.net",
   // google.com/maps is here for the embedded location map on /contact — without
