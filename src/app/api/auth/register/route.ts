@@ -82,12 +82,27 @@ export async function POST(req: NextRequest) {
     // this account existed — see linkGuestOrdersToAccount's doc comment.
     await linkGuestOrdersToAccount(user.id, user.email, phone);
 
-    // Fire-and-forget emails — never block or fail registration if email isn't configured yet.
+    // Awaited, not fire-and-forget: on serverless the execution context can be
+    // frozen as soon as the response is returned, so a detached send may never
+    // reach the provider — the same failure server/orders.ts documents. Sent in
+    // parallel so registration waits for one round trip, not two, and neither
+    // can fail the request: a customer must still get an account when the mail
+    // provider is having a bad minute.
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
-    signActionToken(user.id, "verify-email", "24h").then((token) => {
-      sendVerificationEmail(user.email, user.name, `${siteUrl}/api/auth/verify-email?token=${token}`).catch(() => {});
-    });
-    sendWelcomeEmail(user.email, user.name).catch(() => {});
+    const verifyToken = await signActionToken(user.id, "verify-email", "24h");
+    const [verification, welcome] = await Promise.allSettled([
+      sendVerificationEmail(user.email, user.name, `${siteUrl}/api/auth/verify-email?token=${verifyToken}`),
+      sendWelcomeEmail(user.email, user.name),
+    ]);
+    for (const [label, outcome] of [["verification", verification], ["welcome", welcome]] as const) {
+      const failed = outcome.status === "rejected" || !outcome.value?.sent;
+      if (failed) {
+        console.error(
+          `[register] ${label} email failed for ${user.email}:`,
+          outcome.status === "rejected" ? outcome.reason : outcome.value?.error
+        );
+      }
+    }
 
     const { password: _pw, ...safeUser } = user;
     return NextResponse.json({ user: safeUser }, { status: 201 });

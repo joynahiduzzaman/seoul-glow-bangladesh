@@ -15,6 +15,7 @@ import { linkGuestOrdersToAccount } from "./orders";
 import { generateReferralCode, safeRedirectPath } from "@/lib/utils";
 import { SOCIAL_LOGIN_ENABLED } from "@/lib/auth-providers";
 import { normalizeEmail } from "@/lib/email-identity";
+import { sendWelcomeEmail } from "./email";
 
 export type OAuthProvider = "google" | "facebook";
 
@@ -264,6 +265,27 @@ export async function handleOAuthCallback(req: NextRequest, provider: OAuthProvi
       // under this same email before the account existed (no phone available
       // from an OAuth profile, so this matches by email only).
       await linkGuestOrdersToAccount(user.id, user.email);
+
+      // Social sign-ups never received this. Registering with email sent a
+      // welcome, signing up with Google sent nothing, so the only mail a Google
+      // customer got was Google's own "you shared data with…" security notice —
+      // which comes from Google, not from us, and cannot be suppressed.
+      //
+      // Deliberately inside the create branch: linking a provider to an existing
+      // account, and every later sign-in, are not new accounts and must not
+      // trigger it. Awaited for the reason documented in server/orders.ts —
+      // fire-and-forget loses the send when the serverless context is torn down
+      // after the redirect.
+      const welcome = await sendWelcomeEmail(user.email, user.name).catch((err: unknown) => ({
+        sent: false,
+        error: err,
+      }));
+      if (!welcome.sent) {
+        console.error(
+          `[oauth:${provider}] welcome email failed for ${user.email}:`,
+          (welcome as { error?: { message?: string } }).error?.message ?? welcome
+        );
+      }
     }
 
     const payload = { userId: user.id, role: user.role, email: user.email };

@@ -25,7 +25,25 @@ export async function POST(req: NextRequest) {
   if (user) {
     const token = await signActionToken(user.id, "reset-password", "1h");
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
-    sendPasswordResetEmail(user.email, user.name, `${siteUrl}/reset-password?token=${token}`).catch(() => {});
+    // Awaited, for the reason documented in server/orders.ts: on serverless the
+    // execution context can be frozen the moment the response is returned, so a
+    // fire-and-forget request to the mail provider may never complete. A reset
+    // email that silently never sends locks the customer out of their account,
+    // and the deliberate always-success response means nothing else would show
+    // it. The provider's answer is logged rather than returned, so this still
+    // reveals nothing about whether the address has an account.
+    const result = await sendPasswordResetEmail(
+      user.email,
+      user.name,
+      `${siteUrl}/reset-password?token=${token}`
+    ).catch((err) => ({ sent: false, error: err }));
+
+    if (!result.sent) {
+      console.error(
+        `[forgot-password] reset email failed for ${user.email}:`,
+        (result as { error?: { message?: string } }).error?.message ?? result
+      );
+    }
   }
 
   return NextResponse.json({ success: true });
