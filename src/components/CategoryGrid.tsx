@@ -1,12 +1,9 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { Dictionary } from "@/lib/i18n/dictionaries";
+import CategoryCard, { type CategoryCardItem } from "./CategoryCard";
 
-export interface CategoryGridItem {
-  id: string;
-  name: string;
-  slug: string;
-  image: string | null;
-}
+export type CategoryGridItem = CategoryCardItem;
 
 // Grid column counts the admin can pick from — kept as literal Tailwind classes
 // (not string-concatenated) so Tailwind's JIT compiler can actually see them.
@@ -14,21 +11,20 @@ const COLUMNS_CLASSES: Record<number, string> = {
   2: "grid-cols-2",
   3: "grid-cols-2 sm:grid-cols-3",
   4: "grid-cols-2 sm:grid-cols-4",
-  6: "grid-cols-2 sm:grid-cols-3 md:grid-cols-6",
+  6: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6",
 };
 
-// Falls back to an Unsplash placeholder only when a category has no image of its
-// own in the database — keeps the original site's visual richness for any category
-// an admin hasn't uploaded a photo for yet.
-const PLACEHOLDER_IMAGES = [
-  "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80",
-  "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?auto=format&fit=crop&w=400&q=80",
-  "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=400&q=80",
-  "https://images.unsplash.com/photo-1601049676869-702ea24cfd58?auto=format&fit=crop&w=400&q=80",
-  "https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?auto=format&fit=crop&w=400&q=80",
-  "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=400&q=80",
-];
-
+/**
+ * Homepage category wall.
+ *
+ * Shares CategoryCard with the /categories directory, and mirrors the brand
+ * section beat for beat — centred header, the same tile, one exit button — so
+ * the two bands on the homepage read as a pair rather than as two components
+ * that happen to sit near each other.
+ *
+ * The "view all" link used to point at /shop, which meant a control promising
+ * categories delivered the unfiltered product grid. It goes to the directory.
+ */
 export default function CategoryGrid({
   dict,
   categories,
@@ -46,36 +42,43 @@ export default function CategoryGrid({
 }) {
   if (categories.length === 0) return null;
 
-  return (
-    <section className="container-px mx-auto section-py" style={backgroundColor ? { backgroundColor } : undefined}>
-      <div className="flex items-end justify-between mb-10">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-gold-text font-semibold mb-3">{subtitle || "Shop the Routine"}</p>
-          <h2 className="section-title">{title || dict.home.shopByCategory}</h2>
-        </div>
-        <Link href="/shop" className="link-tap text-sm text-rose-gold-text hover:underline shrink-0">{dict.home.viewAll}</Link>
-      </div>
+  // Both translations of this label end in a "→" glyph, from when it was a plain
+  // text link. The button draws its own animated arrow, so the baked-in one is
+  // stripped rather than rendering "View all → →".
+  const viewAllLabel = (dict.home.viewAll || "View all").replace(/\s*[→›»>]+\s*$/u, "").trim();
 
-      {/* Elegant rounded-square editorial cards — real photography, soft shadow, hover lift. */}
-      <div className={`grid ${COLUMNS_CLASSES[columns] || COLUMNS_CLASSES[6]} gap-4 md:gap-5`}>
-        {categories.map((cat, i) => (
+  return (
+    <section className="section-py" style={backgroundColor ? { backgroundColor } : undefined}>
+      <div className="container-px mx-auto">
+        <div className="mb-10 text-center">
+          <p className="eyebrow mb-3">{subtitle || "Shop the Routine"}</p>
+          <h2 className="section-title">{title || dict.home.shopByCategory}</h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-body">
+            Every step of the routine, from first cleanse to sunscreen.
+          </p>
+        </div>
+
+        <ul className={`grid ${COLUMNS_CLASSES[columns] || COLUMNS_CLASSES[6]} gap-3 sm:gap-5`}>
+          {categories.map((category) => (
+            <li key={category.id}>
+              <CategoryCard category={category} />
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-10 text-center">
           <Link
-            key={cat.id}
-            href={`/shop?category=${cat.slug}`}
-            className="group block rounded-xl2 overflow-hidden bg-white border border-border-soft shadow-soft transition-all duration-300 hover:-translate-y-1.5 hover:shadow-glass"
+            href="/categories"
+            className="group inline-flex min-h-[44px] items-center gap-2 rounded-full border border-ink/15 bg-white px-7 text-sm font-semibold text-ink transition-colors duration-300 hover:border-rose-gold hover:text-rose-gold-text"
           >
-            <div className="aspect-[4/5] overflow-hidden">
-              <img
-                src={cat.image || PLACEHOLDER_IMAGES[i % PLACEHOLDER_IMAGES.length]}
-                alt={cat.name}
-                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-              />
-            </div>
-            <div className="px-3 py-3 text-center">
-              <span className="text-sm font-medium text-ink">{cat.name}</span>
-            </div>
+            {viewAllLabel}
+            <ArrowRight
+              size={15}
+              aria-hidden="true"
+              className="transition-transform duration-300 ease-silk group-hover:translate-x-0.5"
+            />
           </Link>
-        ))}
+        </div>
       </div>
     </section>
   );

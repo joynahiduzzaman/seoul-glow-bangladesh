@@ -68,7 +68,15 @@ async function resolveProducts(settings: Record<string, any>, autoWhere: any, de
 }
 
 const getAllCategories = unstable_cache(
-  async () => prisma.category.findMany({ select: { id: true, name: true, slug: true, image: true }, orderBy: { name: "asc" } }),
+  // The product count is carried so the homepage tiles read the same as the
+  // ones in the /categories directory, which show it.
+  async () => {
+    const categories = await prisma.category.findMany({
+      select: { id: true, name: true, slug: true, image: true, _count: { select: { products: true } } },
+      orderBy: { name: "asc" },
+    });
+    return categories.map(({ _count, ...category }) => ({ ...category, productCount: _count.products }));
+  },
   ["home-all-categories"],
   { revalidate: 60 }
 );
