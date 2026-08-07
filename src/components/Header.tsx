@@ -11,6 +11,8 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import Marquee from "./Marquee";
 import SearchOverlay from "./SearchOverlay";
 import MegaMenu from "./MegaMenu";
+import AccountMenu, { type SessionUser } from "./AccountMenu";
+import NotificationBell from "./NotificationBell";
 
 const BRAND_LINKS = [
   { label: "COSRX", href: "/brands/cosrx" },
@@ -33,8 +35,9 @@ const CATEGORY_LINKS = [
 export default function Header({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isAuthed, setIsAuthed] = useState(false);
-  const [isStaff, setIsStaff] = useState(false);
+  const [user, setUser] = useState<SessionUser | null>(null);
+  // The staff shortcut now lives inside AccountMenu, which already has the role.
+  const isAuthed = Boolean(user);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const totalItems = useCartStore((s) => s.totalItems());
@@ -74,8 +77,14 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => {
-        setIsAuthed(Boolean(d.user));
-        setIsStaff(Boolean(d.user && ["ADMIN", "MANAGER", "STAFF"].includes(d.user.role)));
+        // Only the fields the header renders are kept — the endpoint returns the
+        // whole (password-stripped) record, and there is no reason to hold the
+        // rest in client state.
+        setUser(
+          d.user
+            ? { id: d.user.id, name: d.user.name, email: d.user.email, role: d.user.role, image: d.user.image ?? null }
+            : null
+        );
       })
       .catch(() => {});
   }, [pathname]);
@@ -104,7 +113,11 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
               : "bg-cream/90 backdrop-blur-sm border-b border-border-soft/70 py-[7px] md:py-[9px]"
           }`}
         >
-        <div className="container-px mx-auto flex items-center justify-between gap-6">
+        {/* gap-2 on a phone: with the notification bell added, a 24px gap between
+            the menu button, the mark and the icon cluster pushed the row 10px
+            past a 320px screen. justify-between still does the spacing wherever
+            there is room. */}
+        <div className="container-px mx-auto flex items-center justify-between gap-2 sm:gap-6">
           <button
             className="lg:hidden touch-target -ml-2.5"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -195,13 +208,22 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
             <Link href="/account/wishlist" aria-label={dict.nav.wishlist} className="hidden sm:flex touch-target hover:text-rose-gold transition-colors active:scale-95">
               <Heart size={20} />
             </Link>
-            <Link
-              href={!isAuthed ? "/login" : isStaff ? "/admin" : "/account"}
-              aria-label={dict.nav.account}
-              className="touch-target hover:text-rose-gold transition-colors active:scale-95"
-            >
-              <User size={20} />
-            </Link>
+            {/* Signed in: the bell and the customer's own identity. Signed out:
+                the plain link to /login exactly as before, so nothing about the
+                guest header changes. `user` is null until /api/auth/me answers,
+                so the first paint is the guest state either way. */}
+            {isAuthed && <NotificationBell />}
+            {user ? (
+              <AccountMenu user={user} />
+            ) : (
+              <Link
+                href="/login"
+                aria-label={dict.nav.account}
+                className="touch-target hover:text-rose-gold transition-colors active:scale-95"
+              >
+                <User size={20} />
+              </Link>
+            )}
             <button
               onClick={openCart}
               aria-label={mounted && totalItems > 0 ? `${dict.nav.cart} (${totalItems})` : dict.nav.cart}
