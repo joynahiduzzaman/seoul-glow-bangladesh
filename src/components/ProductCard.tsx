@@ -216,7 +216,13 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
             {product.isTrending && <BadgePill variant="coupon">COUPON</BadgePill>}
           </div>
 
-          <div className="mt-1.5 flex h-7 items-baseline gap-2">
+          {/* Below 390px the two-column grid leaves a 128px card, and price plus
+              struck-through price need 163px side by side — the overflow pushed
+              the whole document 15px wide, so every page scrolled sideways. No
+              type scale closes a 35px gap, so they stack instead. The reserved
+              height is fixed at each breakpoint rather than auto, which is what
+              keeps this row from shifting as prices load. */}
+          <div className="mt-1.5 flex h-7 items-baseline gap-2 max-[389px]:h-11 max-[389px]:flex-col max-[389px]:items-start max-[389px]:gap-0">
             <span className="text-lg font-semibold tabular-nums text-ink">{formatBDT(finalPrice)}</span>
             {onSale && (
               <span className="text-xs tabular-nums text-ink/70 line-through">{formatBDT(product.price)}</span>

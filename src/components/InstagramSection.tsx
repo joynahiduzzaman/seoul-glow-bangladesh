@@ -38,7 +38,10 @@ export default function InstagramSection({
           <Instagram size={24} className="text-rose-gold-text" />
         </span>
 
-        <h2 className="section-title mb-3">{title || `Follow @${handle}`}</h2>
+        {/* The handle is a single unbreakable token wider than a 320px screen at
+            this type size, so without break-words it overflowed the viewport and
+            the whole page scrolled sideways. */}
+        <h2 className="section-title mb-3 break-words">{title || `Follow @${handle}`}</h2>
 
         <p className="mx-auto mb-8 max-w-md leading-relaxed text-ink/70">
           New arrivals, honest routines and real customer glow-ups — shared first on Instagram.

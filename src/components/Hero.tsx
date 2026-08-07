@@ -112,12 +112,18 @@ function HeroImage({
  *
  * Tracking is tightened on small screens: at 0.32em this line is a few px too
  * wide for a 390px viewport and wraps, orphaning the last word under the
- * hairline. It opens back up from `sm`, where there's room for it. */
+ * hairline. It opens back up from `sm`, where there's room for it.
+ *
+ * The tightening was not enough at 320px, where even 0.22em left the line ~16px
+ * too wide. Combined with `whitespace-nowrap` that widened the document itself,
+ * so every page using the hero scrolled sideways — the horizontal shift was
+ * visible site-wide, not just here. The line may now wrap below `sm`; two short
+ * lines on the narrowest phones beats a page that slides under the thumb. */
 function HeroEyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mb-7 inline-flex items-center gap-3 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.22em] text-rose-gold-light sm:gap-3.5 sm:text-[11px] sm:tracking-[0.32em]">
+    <span className="mb-7 inline-flex max-w-full items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-rose-gold-light sm:gap-3.5 sm:text-[11px] sm:tracking-[0.32em]">
       <span className="h-px w-7 shrink-0 bg-gradient-to-r from-transparent to-rose-gold-light/70 sm:w-9" aria-hidden="true" />
-      {children}
+      <span className="min-w-0 sm:whitespace-nowrap">{children}</span>
     </span>
   );
 }

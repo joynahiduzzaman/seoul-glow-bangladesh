@@ -111,7 +111,19 @@ export default async function Footer({ locale, dict }: { locale: Locale; dict: D
           <NewsletterFooterForm dict={dict} />
 
           <div className="mt-8">
-            <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="link-tap text-xs text-cream/55 hover:text-cream transition-colors mb-3">
+            {/* link-tap is inline-flex, so the text is an anonymous flex item
+                that will not shrink below its longest unbreakable word — and
+                "@seoulglowbangladesh" is wider than this column once the footer
+                splits at md. That pushed the whole document 9px wide on a 768px
+                tablet, so every page scrolled sideways. `anywhere` is the one
+                overflow-wrap value that reduces min-content size in flex
+                layout; `break-word` would not have fixed this. */}
+            <a
+              href={instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link-tap mb-3 max-w-full [overflow-wrap:anywhere] text-xs text-cream/55 transition-colors hover:text-cream"
+            >
               Follow @{business.instagramHandle}
             </a>
             <div className="grid grid-cols-4 gap-1.5">
