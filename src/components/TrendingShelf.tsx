@@ -1,7 +1,17 @@
-import Link from "next/link";
-import ProductCard, { ProductCardData } from "./ProductCard";
 import { Dictionary } from "@/lib/i18n/dictionaries";
+import ProductRail from "./ProductRail";
+import { ProductCardData } from "./ProductCard";
 
+/**
+ * Trending was the odd one out on the homepage: a horizontally-scrolling shelf
+ * of fixed 224px cards with a plain text "View all" link, while every
+ * neighbouring band was a responsive grid under a centred header. Two costs
+ * came with that — the narrow card clipped its own quick-view label on a phone,
+ * and half the row sat off-screen with only a scrollbar to say so.
+ *
+ * It is the shared rail now, and keeps its own name only because the homepage
+ * builder and the admin preview address the section by this component.
+ */
 export default function TrendingShelf({
   dict,
   products,
@@ -21,30 +31,17 @@ export default function TrendingShelf({
   viewAllUrl?: string;
   backgroundColor?: string;
 }) {
-  if (products.length === 0) return null;
-
   return (
-    <section className="section-py" style={backgroundColor ? { backgroundColor } : undefined}>
-      <div className="container-px mx-auto flex items-end justify-between mb-8">
-        <div>
-          {subtitle && <p className="text-xs uppercase tracking-[0.2em] text-gold-text font-semibold mb-2">{subtitle}</p>}
-          <h2 className="section-title">{title || dict.home.trending}</h2>
-        </div>
-        {showViewAll && (
-          <Link href={viewAllUrl || "/shop?filter=trending"} className="link-tap text-sm text-rose-gold-text hover:underline">
-            {viewAllText || dict.home.viewAll}
-          </Link>
-        )}
-      </div>
-      <div className="overflow-x-auto pb-4">
-        <div className="flex gap-6 container-px mx-auto w-max min-w-full">
-          {products.map((p) => (
-            <div key={p.id} className="w-56 shrink-0">
-              <ProductCard product={p} />
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
+    <ProductRail
+      title={title || dict.home.trending}
+      eyebrow="Most Loved This Week"
+      subtitle={subtitle}
+      description="What Bangladesh is reaching for right now, ranked by what actually leaves the shelf."
+      href={viewAllUrl || "/shop?filter=trending"}
+      products={products}
+      showViewAll={showViewAll}
+      viewAllText={viewAllText || dict.home.viewAll}
+      backgroundColor={backgroundColor}
+    />
   );
 }

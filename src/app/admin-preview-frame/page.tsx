@@ -162,7 +162,9 @@ export default function PreviewFramePage() {
         return (
           <ProductRail
             title={settings.title || "Flash Sale"}
+            eyebrow="Limited Time"
             subtitle={settings.subtitle}
+            description="Discounted while the timer runs. Prices go back up when it does."
             href="#"
             products={data?.products || []}
             showCountdown={settings.showCountdown !== false}
@@ -190,7 +192,9 @@ export default function PreviewFramePage() {
         return (
           <ProductRail
             title={settings.title || "New Arrivals"}
+            eyebrow="Just Landed"
             subtitle={settings.subtitle}
+            description="Fresh off the shipment from Seoul, before it sells through."
             href="#"
             products={data?.products || []}
             showViewAll={settings.showViewAll !== false}

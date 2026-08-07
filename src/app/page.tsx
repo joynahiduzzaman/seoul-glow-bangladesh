@@ -169,7 +169,11 @@ async function renderSection(section: { sectionKey: string; settings: string }, 
               .map((id: string) => all.find((c) => c.id === id))
               .filter((c: typeof all[number] | undefined): c is typeof all[number] => Boolean(c))
               .slice(0, limit)
-          : all.slice(0, limit);
+          : // Auto mode showed the first six categories alphabetically, which put
+            // tiles reading "0 PRODUCTS" on the homepage — each one a click to an
+            // empty shelf. Stocked categories come first now; empty ones only fill
+            // the row if there aren't enough, so the section never shrinks.
+            [...all].sort((a, b) => Number(b.productCount > 0) - Number(a.productCount > 0)).slice(0, limit);
       return (
         <CategoryGrid
           dict={dict}
@@ -201,7 +205,9 @@ async function renderSection(section: { sectionKey: string; settings: string }, 
       return products.length > 0 ? (
         <ProductRail
           title={heading("flashSale", "Flash Sale")}
+          eyebrow="Limited Time"
           subtitle={settings.subtitle}
+          description="Discounted while the timer runs. Prices go back up when it does."
           href={settings.viewAllUrl || "/shop?filter=flashsale"}
           products={products}
           showCountdown={settings.showCountdown !== false}
@@ -243,7 +249,9 @@ async function renderSection(section: { sectionKey: string; settings: string }, 
       return products.length > 0 ? (
         <ProductRail
           title={heading("newArrivals", "New Arrivals")}
+          eyebrow="Just Landed"
           subtitle={settings.subtitle}
+          description="Fresh off the shipment from Seoul, before it sells through."
           href={settings.viewAllUrl || "/shop?filter=new"}
           products={products}
           showViewAll={settings.showViewAll !== false}
