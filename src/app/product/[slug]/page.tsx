@@ -208,7 +208,9 @@ export default async function ProductPage({ params }: { params: { slug: string }
             />
           </div>
 
-          <ProductTrustRow />
+          {/* Sits with the buy controls: the reasons to want it belong beside
+              the decision, not a screen below it. */}
+          <ProductBenefits benefits={benefits} />
         </div>
       </div>
 
@@ -221,10 +223,9 @@ export default async function ProductPage({ params }: { params: { slug: string }
         stock={product.stock}
       />
 
-      {/* What it does comes before how to apply it: a shopper still deciding
-          needs the claim first, and the ritual block only matters once they are
-          past that. */}
-      <ProductBenefits benefits={benefits} />
+      {/* The shipping and authenticity promises, once the product itself has
+          been made the case for. */}
+      <ProductTrustRow />
 
       {/* Editorial storytelling block — "The Ritual" */}
       {product.howToUse && (
