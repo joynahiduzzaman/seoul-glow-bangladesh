@@ -243,7 +243,10 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
       <button
         onClick={handleAdd}
         disabled={outOfStock || adding}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-ink/15 py-3 text-xs font-semibold uppercase tracking-[0.1em] text-ink transition-all duration-300 ease-silk hover:border-ink hover:bg-ink hover:text-white hover:shadow-e2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink disabled:hover:shadow-none"
+        // Same rose fill as the product page's button so the action looks the
+        // same wherever it appears; shorter and without the lift, because a grid
+        // of cards each rising on hover is noise rather than emphasis.
+        className="btn-cart mt-3 w-full !h-11 !gap-2 !px-3 !text-xs !font-semibold uppercase !tracking-[0.1em] hover:!translate-y-0"
       >
         {adding && <Loader2 size={13} className="animate-spin" />}
         {outOfStock ? dict.product.outOfStock.split(".")[0] : dict.product.addToCart}

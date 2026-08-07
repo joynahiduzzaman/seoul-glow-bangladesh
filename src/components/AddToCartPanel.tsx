@@ -126,9 +126,12 @@ export default function AddToCartPanel({ productId, name, slug, image, price, st
           )}
         </button>
 
-        {/* Buy Now steps back to the outline so the two are not competing
-            primaries; the action itself is unchanged. */}
-        <button onClick={handleBuyNow} className="btn-outline !h-[52px] w-full sm:w-auto sm:!px-7">
+        {/* Filled, but olive rather than rose: a real action that cannot be
+            mistaken for the same one. The handler is unchanged. */}
+        {/* A floor on the width so it does not collapse to a small pill beside
+            the wider primary — still narrower, which is the hierarchy, but
+            deliberately so rather than by accident of label length. */}
+        <button onClick={handleBuyNow} className="btn-buy w-full sm:w-auto sm:min-w-[10rem]">
           {dict.product.buyNow}
         </button>
       </div>

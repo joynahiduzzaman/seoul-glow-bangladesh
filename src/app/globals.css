@@ -77,6 +77,23 @@ body {
          disabled:to-ink/25 disabled:text-white/80 disabled:shadow-none;
 }
 
+/* Buy Now, the express path. Filled so it reads as a real action rather than a
+   afterthought, but olive rather than rose so it never competes with Add to
+   Cart for the same job — two saturated buttons in one hue force the shopper to
+   compare them before choosing. Olive is already a brand colour, and white on
+   #6B6B4A measures 5.49:1; the gradient only darkens from there, so the label
+   holds up across the whole fill. */
+.btn-buy {
+  @apply inline-flex h-[52px] items-center justify-center gap-2 rounded-xl
+         bg-gradient-to-br from-[#6B6B4A] to-[#54543A]
+         px-7 text-sm font-semibold text-white shadow-e1
+         transition-all duration-300 ease-silk
+         hover:-translate-y-0.5 hover:from-[#5F5F41] hover:to-[#484831] hover:shadow-e3
+         active:translate-y-0 active:scale-[0.98]
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive focus-visible:ring-offset-2
+         disabled:translate-y-0 disabled:cursor-not-allowed disabled:from-ink/25 disabled:to-ink/25 disabled:shadow-none;
+}
+
 /* Outline variant: the label is text on cream, so it needs the text-safe accent
    (5.58:1) rather than `rose-gold` (2.65:1). The border keeps the brand tone —
    a border is not text and carries no contrast requirement. Hover inverts to the

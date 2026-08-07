@@ -1,13 +1,15 @@
-import { Check } from "lucide-react";
+import { benefitVisual } from "@/lib/benefit-icons";
 
 /**
- * What this product does for your skin, as a scannable list.
+ * What this product does for your skin, as a row of icon marks.
  *
- * Rows inside one panel rather than a grid of separate tiles: with three or
- * four short phrases, tiles gave each one a large card and a repeated icon,
- * which read as a dashboard of identical widgets rather than a claim list. A
- * shared surface divided by hairlines lets the eye run straight down the
- * benefits, which is the only thing being compared here.
+ * Each benefit gets its own colour and glyph rather than one repeated icon, so
+ * the row can be read at a glance instead of word by word — the colour is doing
+ * the sorting before the label is read. The palette is muted on purpose: six
+ * saturated circles would read as a chart legend rather than a beauty page.
+ *
+ * The glyphs are decorative and hidden from assistive tech; the label beneath
+ * carries the meaning, so nothing depends on recognising an icon or a colour.
  */
 export default function ProductBenefits({ benefits }: { benefits: string[] }) {
   if (benefits.length === 0) return null;
@@ -15,39 +17,33 @@ export default function ProductBenefits({ benefits }: { benefits: string[] }) {
   return (
     <section className="mt-14 md:mt-20">
       <div className="mx-auto max-w-3xl">
-        <header className="mb-6 text-center sm:mb-8">
+        <header className="mb-7 text-center sm:mb-9">
           <p className="eyebrow mb-2.5">Why it works</p>
           <h2 className="font-display text-2xl font-semibold sm:text-3xl">Key Benefits</h2>
         </header>
 
-        <ul className="overflow-hidden rounded-xl2 border border-border-soft bg-white shadow-e1 sm:grid sm:grid-cols-2">
-          {benefits.map((benefit, i) => {
-            // An odd final item would sit in one column and leave the row half
-            // empty — with the hairline above it stopping mid-panel. Spanning
-            // both tracks keeps every divider edge to edge.
-            const isLoneLast = i === benefits.length - 1 && benefits.length % 2 === 1;
+        <ul className="flex flex-wrap items-start justify-center gap-x-2 gap-y-6 sm:gap-x-5">
+          {benefits.map((benefit) => {
+            const { Icon, color } = benefitVisual(benefit);
             return (
-            <li
-              key={benefit}
-              className={[
-                "flex items-center gap-3.5 px-5 py-4 sm:px-6 sm:py-5",
-                // Hairlines between rows, and between the two columns from sm.
-                // Drawn per-cell rather than with divide-* so the seam is right
-                // in both the stacked and the two-column arrangement.
-                i > 0 ? "border-t border-border-soft" : "",
-                !isLoneLast && i % 2 === 1 ? "sm:border-l sm:border-border-soft" : "",
-                i === 1 ? "sm:border-t-0" : "",
-                isLoneLast ? "sm:col-span-2" : "",
-              ].join(" ")}
-            >
-              <span
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-rose-gold/20 to-soft-pink/60 text-rose-gold-text"
-                aria-hidden="true"
+              <li
+                key={benefit}
+                // Three across a 320px phone, more as the row widens. A fixed
+                // basis keeps every label in the same column width so the marks
+                // line up rather than drifting with text length.
+                className="flex w-[30%] max-w-[7rem] flex-col items-center text-center sm:w-24"
               >
-                <Check size={15} strokeWidth={2.5} />
-              </span>
-              <p className="text-[15px] font-medium leading-snug text-ink">{benefit}</p>
-            </li>
+                <span
+                  aria-hidden="true"
+                  style={{ backgroundColor: color }}
+                  className="mb-2.5 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-e2 ring-4 ring-white transition-transform duration-300 ease-silk hover:scale-105 sm:h-16 sm:w-16"
+                >
+                  <Icon size={24} strokeWidth={1.75} />
+                </span>
+                <span className="text-[13px] font-semibold leading-snug text-ink [overflow-wrap:anywhere]">
+                  {benefit}
+                </span>
+              </li>
             );
           })}
         </ul>

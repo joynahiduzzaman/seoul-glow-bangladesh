@@ -207,7 +207,8 @@ export default function QuickViewModal({
                 type="button"
                 onClick={handleAdd}
                 disabled={outOfStock || adding}
-                className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-50"
+                // Matches the product page and the card: one look for one action.
+                className="btn-cart w-full"
               >
                 {adding && <Loader2 size={15} className="animate-spin" />}
                 {outOfStock ? "Out of stock" : adding ? "Adding…" : "Add to Cart"}
