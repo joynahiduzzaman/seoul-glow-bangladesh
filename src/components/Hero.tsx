@@ -21,36 +21,35 @@ const SLIDE_DURATION = 6000;
 /**
  * Darkening scrim behind the hero copy.
  *
- * Deliberately NOT a flat film over the whole frame. The previous version
- * stacked three full-surface gradients plus a radial vignette, which dimmed the
- * center of the photo — exactly where the subject sits — and made the whole
- * hero read as muddy and out-of-focus even though the image itself was fine.
+ * Deliberately NOT a flat film over the whole frame: shading the middle dims
+ * the subject and makes a sharp photograph read as muddy.
  *
- * Instead: on desktop a single wash anchored to the left that has fully faded
- * out by ~80% across, so the text column is protected while the subject stays
- * vivid and sharp. On mobile the copy sits over the middle of the frame, so
- * there a conventional bottom-up gradient does the work instead.
+ * The weight sits along the bottom, under the lockup, with a gentle left lean
+ * from md up. The subject and the upper two-thirds of the frame stay vivid.
  */
 function HeroScrim() {
   return (
     <>
-      {/* Mobile: bottom-weighted, since the copy spans the full width there. */}
-      <div className="absolute inset-0 md:hidden bg-gradient-to-t from-ink/95 via-ink/70 to-ink/30" />
+      {/* Retuned for a small bottom-anchored lockup rather than the tall
+          headline block that used to sit mid-frame. The old left wash held
+          rgba(...,0.93) across the first quarter of the image to protect that
+          headline; with only an eyebrow, a button and a proof row left, that
+          much shading just dulled a third of the photograph for nothing.
+          The weight now sits along the bottom, where the lockup actually is,
+          and the upper two-thirds of the image is left almost untouched. */}
 
-      {/* Desktop: left-anchored wash, transparent well before the center. */}
-      <div className="absolute inset-0 hidden md:block bg-[linear-gradient(100deg,rgba(47,42,40,0.93)_0%,rgba(47,42,40,0.80)_24%,rgba(47,42,40,0.42)_48%,rgba(47,42,40,0.08)_70%,rgba(47,42,40,0)_84%)]" />
+      {/* Bottom anchor, every size: this is what the copy sits on. The ramp is
+          tuned to the lockup's actual extent — the eyebrow sits roughly halfway
+          up this band, and an earlier, gentler curve left it at about 0.12
+          opacity, far too little to read over bright product photography. */}
+      <div className="absolute inset-x-0 bottom-0 h-[76%] bg-[linear-gradient(0deg,rgba(47,42,40,0.97)_0%,rgba(47,42,40,0.93)_18%,rgba(47,42,40,0.80)_38%,rgba(47,42,40,0.54)_58%,rgba(47,42,40,0.22)_80%,rgba(47,42,40,0)_100%)] md:h-[72%]" />
 
-      {/* Right edge, xl+ only: a much gentler counterpart to the left wash, just
-          enough to seat the proof column's white text over whatever product
-          photography happens to be on that side. Deliberately narrow and weak —
-          it must not creep inward and dull the subject in the center. */}
-      <div className="absolute inset-y-0 right-0 hidden w-[28%] xl:block bg-[linear-gradient(270deg,rgba(47,42,40,0.74)_0%,rgba(47,42,40,0.38)_48%,rgba(47,42,40,0)_100%)]" />
-
-      {/* Shallow bottom fade — just enough to seat the proof strip and scroll cue. */}
-      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-ink/70 to-transparent" />
+      {/* A left lean from md up, so the lockup's left edge stays seated against
+          bright product photography without touching the subject. */}
+      <div className="absolute inset-0 hidden md:block bg-[linear-gradient(100deg,rgba(47,42,40,0.70)_0%,rgba(47,42,40,0.42)_26%,rgba(47,42,40,0.14)_50%,rgba(47,42,40,0)_70%)]" />
 
       {/* Whisper of top shading so the sticky header never floats on a bare highlight. */}
-      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-ink/40 to-transparent" />
+      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-ink/45 to-transparent" />
     </>
   );
 }
@@ -110,20 +109,20 @@ function HeroImage({
 /** Editorial eyebrow: a hairline rule that grows into the text, rather than a
  * bordered pill. Reads quieter and more magazine-like against photography.
  *
- * Tracking is tightened on small screens: at 0.32em this line is a few px too
- * wide for a 390px viewport and wraps, orphaning the last word under the
- * hairline. It opens back up from `sm`, where there's room for it.
- *
- * The tightening was not enough at 320px, where even 0.22em left the line ~16px
- * too wide. Combined with `whitespace-nowrap` that widened the document itself,
- * so every page using the hero scrolled sideways — the horizontal shift was
- * visible site-wide, not just here. The line may now wrap below `sm`; two short
- * lines on the narrowest phones beats a page that slides under the thumb. */
+ * Size and tracking are wound in hard below `sm` so the line fits a 320px
+ * screen on one row, and open back up from `sm` where there is room. Both
+ * failure modes have been seen here: at full tracking the line was ~16px too
+ * wide and, held on one line, widened the document so every page carrying the
+ * hero scrolled sideways; allowed to wrap instead, its second line landed on
+ * the subject's face at the top of the scrim, where there is nothing to read
+ * against. Fitting it is the only option that does neither. */
 function HeroEyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mb-7 inline-flex max-w-full items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-rose-gold-light sm:gap-3.5 sm:text-[11px] sm:tracking-[0.32em]">
-      <span className="h-px w-7 shrink-0 bg-gradient-to-r from-transparent to-rose-gold-light/70 sm:w-9" aria-hidden="true" />
-      <span className="min-w-0 sm:whitespace-nowrap">{children}</span>
+    // mb-5, not mb-7: the lockup is a tight bottom-anchored cluster now, and the
+    // old gap was sized for a headline following it.
+    <span className="mb-5 inline-flex max-w-full items-center gap-2 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-rose-gold-light sm:gap-3.5 sm:text-[11px] sm:tracking-[0.32em]">
+      <span className="h-px w-5 shrink-0 bg-gradient-to-r from-transparent to-rose-gold-light/70 sm:w-9" aria-hidden="true" />
+      <span className="min-w-0 whitespace-nowrap">{children}</span>
     </span>
   );
 }
@@ -233,7 +232,15 @@ function HeroCopy({
         </p>
       )}
 
-      <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+      {/* mt-10 is the spacing under a full copy block. With no headline the
+          lockup is just an eyebrow and a button, and that gap left the eyebrow
+          stranded high up where the scrim has barely started — so it tightens
+          into one cluster instead. */}
+      <div
+        className={`flex flex-wrap items-center gap-x-8 gap-y-4 ${
+          hasTitle || hasSubtitle ? "mt-10" : "mt-1"
+        }`}
+      >
         <Link href={primaryUrl || "/shop"} className="btn-primary px-9">
           {primaryText || dict.home.shopCollection}
         </Link>
@@ -282,11 +289,14 @@ function HeroProofInline({ dict, brandCount }: { dict: Dictionary; brandCount: n
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.3 }}
-      className="mt-12 border-t border-white/12 pt-7 xl:hidden"
+      // No right padding below sm: three columns have only ~288px to share
+      // there, and reserving room for the floating chat button broke "1–3 Days"
+      // onto two lines. The row sits below that button now, not beside it.
+      className="mt-8 w-full border-t border-white/15 pt-6 sm:mt-9 sm:pr-24"
     >
       {/* The number leads and the label sits underneath — scans far faster than
           one run-on sentence of claims. */}
-      <dl className="grid max-w-lg grid-cols-3 gap-4 sm:gap-7">
+      <dl className="grid max-w-lg grid-cols-3 gap-3 sm:gap-7">
         {heroStats(dict, brandCount).map(({ srLabel, value, Icon, label }) => (
           <div key={label}>
             {/* The caption lives INSIDE the <dd>. A <dl> (even with div
@@ -294,11 +304,13 @@ function HeroProofInline({ dict, brandCount }: { dict: Dictionary; brandCount: n
                 invalid markup and flagged as a serious a11y violation. */}
             <dt className="sr-only">{srLabel}</dt>
             <dd>
-              <span className="flex items-baseline gap-1.5 font-display text-xl font-semibold text-white sm:text-2xl">
+              {/* nowrap: "1-3 Days" broke across two lines in a 320px column,
+                  which threw the three figures out of alignment. */}
+              <span className="flex items-baseline gap-1.5 whitespace-nowrap font-display text-lg font-semibold text-white sm:text-2xl">
                 {value}
                 {Icon && <Icon size={14} className="mb-0.5 text-rose-gold-light" aria-hidden="true" />}
               </span>
-              <span className="mt-1 block text-[10px] uppercase tracking-[0.16em] text-white/40 sm:text-[11px]">{label}</span>
+              <span className="mt-1 block text-[9.5px] uppercase tracking-[0.1em] text-white/50 sm:text-[11px] sm:tracking-[0.16em]">{label}</span>
             </dd>
           </div>
         ))}
@@ -307,52 +319,6 @@ function HeroProofInline({ dict, brandCount }: { dict: Dictionary; brandCount: n
   );
 }
 
-/**
- * Proof points as a vertical column pinned to the right edge, from `xl` up.
- *
- * The hero previously stacked headline, copy, CTA and proof all in one left
- * column, which left the entire right half of the frame empty. Moving the proof
- * across turns it into a balanced spread — message left, subject center, proof
- * right — without putting anything over the middle of the image where the
- * character sits.
- *
- * Hidden below `xl` (rather than `lg`) because at 1024–1279px the column would
- * crowd the headline; those widths keep the inline strip above instead. Only
- * one of the two is ever `display`ed, so screen readers never hear the stats twice.
- */
-function HeroProofColumn({ dict, brandCount }: { dict: Dictionary; brandCount: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 12 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.7, delay: 0.35 }}
-      // right-24 (96px), not right-10: the floating WhatsApp / back-to-top
-      // buttons are pinned to the bottom-right and occupy x from (100% - 80px)
-      // to (100% - 24px). Ending this column at 100% - 96px keeps it entirely
-      // clear of that band, so the two can never overlap at any viewport height
-      // — rather than relying on a vertical offset that only holds on tall screens.
-      className="absolute right-24 top-1/2 z-10 hidden -translate-y-1/2 xl:block 2xl:right-28"
-    >
-      <dl className="flex w-[188px] flex-col text-right [text-shadow:0_1px_12px_rgba(47,42,40,0.55)]">
-        {heroStats(dict, brandCount).map(({ srLabel, value, Icon, label }, i) => (
-          <div key={label} className={i > 0 ? "mt-6 border-t border-white/15 pt-6" : ""}>
-            <dt className="sr-only">{srLabel}</dt>
-            <dd>
-              <span className="flex items-baseline justify-end gap-1.5 font-display text-2xl font-semibold text-white">
-                {value}
-                {Icon && <Icon size={15} className="mb-0.5 text-rose-gold-light" aria-hidden="true" />}
-              </span>
-              <span className="mt-1.5 block text-[11px] uppercase tracking-[0.16em] text-white/55">{label}</span>
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </motion.div>
-  );
-}
-
-/** Scroll cue — shared, and deliberately parked bottom-center in its own lane
- * so it never collides with the slide dots (which sit bottom-right). */
 function HeroScrollCue({ label }: { label: string }) {
   return (
     <motion.div
@@ -486,7 +452,14 @@ function HeroCarousel({
 
       <HeroSideCaption />
 
-      <div className={`relative h-full container-px flex flex-col justify-center max-w-2xl ${alignClasses}`}>
+
+      {/* Anchored to the foot of the frame rather than vertically centred.
+          With the built-in headline retired the column holds an eyebrow, a
+          button and a proof row — centring that little in a tall hero left a
+          screen of dead space above it and made the section read as unfinished.
+          Bottom-anchoring is also the editorial convention: the photograph owns
+          the frame and the lockup sits on it. */}
+      <div className={`relative h-full container-px flex flex-col justify-end pb-14 sm:pb-16 lg:pb-20 max-w-2xl ${alignClasses}`}>
         <HeroCopy
           dict={dict}
           title={slide.title}
@@ -500,7 +473,6 @@ function HeroCarousel({
         <HeroProofInline dict={dict} brandCount={brandCount} />
       </div>
 
-      <HeroProofColumn dict={dict} brandCount={brandCount} />
 
       {/* Slide controls, grouped into one bottom-right cluster.
           The arrows used to be vertically centered against the left and right
@@ -510,7 +482,9 @@ function HeroCarousel({
           center of the frame — where the subject is — completely uncluttered. */}
       {slides.length > 1 && (settings.showArrows || settings.showDots) && (
         <div
-          className="absolute bottom-8 right-6 z-10 flex items-center gap-4 md:right-10"
+          // Lifted clear of the floating chat button, which sits bottom-right and
+          // was covering the next-slide arrow on a tablet.
+          className="absolute bottom-8 right-6 z-10 flex items-center gap-4 max-xl:bottom-24 md:right-10"
           onMouseEnter={() => settings.pauseOnHover && setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
@@ -626,15 +600,22 @@ export default function Hero({
       {/* Content — deliberately spare: one line of eyebrow, one headline, one line of
           copy, two CTAs, one slim proof strip. A premium hero earns trust through
           restraint and whitespace, not by stacking every claim on top of itself. */}
-      <div className="relative h-full container-px mr-auto flex flex-col justify-center items-start text-left max-w-2xl">
+
+      {/* Anchored to the foot of the frame rather than vertically centred.
+          With the built-in headline retired the column holds an eyebrow, a
+          button and a proof row — centring that little in a tall hero left a
+          screen of dead space above it and made the section read as unfinished.
+          Bottom-anchoring is also the editorial convention: the photograph owns
+          the frame and the lockup sits on it. */}
+      <div className="relative h-full container-px mr-auto flex flex-col justify-end pb-14 sm:pb-16 lg:pb-20 items-start text-left max-w-2xl">
         <HeroCopy dict={dict} />
         <HeroProofInline dict={dict} brandCount={brandCount} />
       </div>
 
-      <HeroProofColumn dict={dict} brandCount={brandCount} />
 
       {/* Slide indicators */}
-      <div className="absolute bottom-8 right-6 z-10 flex gap-2 md:right-10">
+      {/* Same clearance as the carousel controls above. */}
+      <div className="absolute bottom-8 right-6 z-10 flex gap-2 max-xl:bottom-24 md:right-10">
         {SLIDES.map((_, i) => (
           <button
             key={i}
