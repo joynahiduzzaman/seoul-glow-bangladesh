@@ -1,7 +1,7 @@
 import { prisma } from "./db";
 import { adjustStock } from "./inventory";
 import { notifyUser } from "./notifications";
-import { sendOrderConfirmationEmail } from "./email";
+import { sendOrderConfirmationEmail, sendNewOrderAdminEmail } from "./email";
 import { logOrderEvent } from "./order-events";
 import { generateOrderNumber, discountedPrice, parseJsonArray, normalizePhone } from "@/lib/utils";
 
@@ -182,6 +182,16 @@ type FinalizableOrder = {
   shippingFee: number;
   total: number;
   paymentMethod: string;
+  // Optional only so the three existing call sites keep type-checking unchanged
+  // — every one of them passes a full Prisma order, so these are present at
+  // runtime. They are what makes the store's alert actionable without opening
+  // the admin panel.
+  shippingPhone?: string | null;
+  shippingStreet?: string | null;
+  shippingArea?: string | null;
+  shippingDistrict?: string | null;
+  guestPhone?: string | null;
+  source?: string | null;
 };
 
 /** Everything that happens once an order is real (not a draft anymore): stock
@@ -244,6 +254,44 @@ export async function finalizeOrderEffects(
     }
   } else {
     await logOrderEvent(order.id, "NOTE", "No email address on this order — no confirmation sent.", "system");
+  }
+
+  // Store-side alert. Sent from the one place an order becomes real, so it
+  // fires exactly once per order and cannot fire for a draft, a failed
+  // checkout, or an order that is later cancelled or deleted — none of those
+  // paths reach here. Separate recipient and subject from the customer's
+  // confirmation above, so neither replaces the other.
+  //
+  // Awaited for the same reason as the confirmation, and its outcome recorded
+  // on the order: a store alert that quietly stops arriving is exactly the kind
+  // of failure nobody notices until an order is missed. It can never fail the
+  // order — send() resolves rather than throwing, and the catch covers the rest.
+  const storeAlert = await sendNewOrderAdminEmail({
+    orderNumber: order.orderNumber,
+    customerName,
+    customerEmail: recipientEmail ?? null,
+    customerPhone: order.shippingPhone ?? order.guestPhone ?? null,
+    shippingAddress: [order.shippingStreet, order.shippingArea, order.shippingDistrict]
+      .filter(Boolean)
+      .join(", ") || null,
+    items: verifiedItems.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })),
+    subtotal: order.subtotal,
+    discount: order.discount,
+    shippingFee: order.shippingFee,
+    total: order.total,
+    paymentMethod: order.paymentMethod,
+    placedVia: order.source || "Online checkout",
+  }).catch((err: unknown) => ({ sent: false, error: err }));
+
+  if (!storeAlert.sent) {
+    const reason = (storeAlert.error as { message?: string })?.message ?? String(storeAlert.error ?? "unknown error");
+    console.error(`[order ${order.orderNumber}] store notification failed:`, reason);
+    await logOrderEvent(
+      order.id,
+      "NOTE",
+      `Store new-order alert FAILED: ${reason.slice(0, 300)}`,
+      "system"
+    );
   }
 
   if (order.userId) {

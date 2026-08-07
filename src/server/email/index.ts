@@ -21,7 +21,10 @@ async function send(to: string, subject: string, html: string, replyTo?: string)
   const resend = getResend();
   if (!resend || !isEmailConfigured()) {
     console.log(`[email:not-configured] Would send "${subject}" to ${to}. Set RESEND_API_KEY to send for real.`);
-    return { sent: false };
+    // Carries a reason rather than a bare false. Callers record this outcome on
+    // the order timeline, and "unknown error" there reads as a provider fault
+    // when the truth is simply that no mail account is configured.
+    return { sent: false, error: new Error("Email is not configured on this deployment (RESEND_API_KEY is unset)") };
   }
 
   try {
@@ -65,6 +68,30 @@ export async function sendOrderConfirmationEmail(
   params: Parameters<typeof templates.orderConfirmationEmail>[0]
 ) {
   return send(to, `Order Confirmed — ${params.orderNumber}`, templates.orderConfirmationEmail(params));
+}
+
+/**
+ * Where store-side order alerts go.
+ *
+ * Defaults to the address the store already sends from, so this needs no setup
+ * to work; ORDER_NOTIFICATION_EMAIL overrides it if the team ever wants these
+ * somewhere other than the sending inbox.
+ */
+export const STORE_ORDER_INBOX = "orders@seoulglowbangladesh.com";
+
+export function storeOrderInbox(): string {
+  const configured = process.env.ORDER_NOTIFICATION_EMAIL?.trim();
+  return configured && configured.includes("@") ? configured : STORE_ORDER_INBOX;
+}
+
+/** Store-side alert for a new order. Separate subject and recipient from the
+ *  customer's confirmation, so the two never collide in a shared mailbox. */
+export async function sendNewOrderAdminEmail(params: Parameters<typeof templates.newOrderAdminEmail>[0]) {
+  return send(
+    storeOrderInbox(),
+    `New order ${params.orderNumber} — ${params.customerName}`,
+    templates.newOrderAdminEmail(params)
+  );
 }
 
 export async function sendOrderStatusEmail(to: string, params: Parameters<typeof templates.orderStatusEmail>[0]) {

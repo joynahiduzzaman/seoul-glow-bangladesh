@@ -182,3 +182,90 @@ export function contactFormEmail(params: { name: string; email: string; subject:
     `${params.subject} — from ${params.name}`
   );
 }
+
+/**
+ * Store-side alert for a newly placed order.
+ *
+ * Deliberately the same shell and helpers as every other message rather than a
+ * plain-text dump: it lands in the same inbox as customer replies, and a
+ * consistent look is what makes it scannable there. It carries what the team
+ * needs to act without opening the admin panel — what was bought, where it is
+ * going, and how it will be paid for — and links straight to the order.
+ *
+ * Distinct from orderConfirmationEmail in subject, heading and recipient, so
+ * the two can never be mistaken for each other in a shared mailbox.
+ */
+export function newOrderAdminEmail(params: {
+  orderNumber: string;
+  customerName: string;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  shippingAddress?: string | null;
+  items: { name: string; quantity: number; price: number }[];
+  subtotal: number;
+  discount: number;
+  shippingFee: number;
+  total: number;
+  paymentMethod: string;
+  placedVia: string;
+}) {
+  const rows = params.items
+    .map(
+      (i) =>
+        `<tr>
+          <td style="padding:11px 0;font-size:14px;color:#2F2A28;border-bottom:1px solid #F1EAE3;">
+            ${escapeHtml(i.name)}
+            <span style="color:#8A8079;">&times; ${i.quantity}</span>
+          </td>
+          <td style="padding:11px 0;font-size:14px;color:#2F2A28;text-align:right;white-space:nowrap;border-bottom:1px solid #F1EAE3;">
+            ${formatBDT(i.price * i.quantity)}
+          </td>
+        </tr>`
+    )
+    .join("");
+
+  const detail = (label: string, value?: string | null) =>
+    value
+      ? `<tr>
+          <td style="padding:4px 0;font-size:13.5px;color:${muted};white-space:nowrap;">${label}</td>
+          <td style="padding:4px 12px;font-size:13.5px;color:#2F2A28;">${escapeHtml(value)}</td>
+        </tr>`
+      : "";
+
+  const totalRow = (label: string, value: string, strong = false, color = muted) =>
+    `<tr>
+      <td style="padding:5px 0;font-size:${strong ? "15px" : "13.5px"};color:${strong ? "#2F2A28" : color};${strong ? "font-weight:700;padding-top:10px;" : ""}">${label}</td>
+      <td style="padding:5px 0;font-size:${strong ? "15px" : "13.5px"};color:${strong ? "#2F2A28" : color};text-align:right;white-space:nowrap;${strong ? "font-weight:700;padding-top:10px;" : ""}">${value}</td>
+    </tr>`;
+
+  const unitCount = params.items.reduce((n, i) => n + i.quantity, 0);
+
+  return emailShell(
+    `New order — ${params.orderNumber}`,
+    `${heading(`New order · ${escapeHtml(params.orderNumber)}`)}
+     ${p(`<strong style="color:#2F2A28;">${escapeHtml(params.customerName)}</strong> placed an order for <strong style="color:#2F2A28;">${formatBDT(params.total)}</strong> — ${unitCount} item${unitCount === 1 ? "" : "s"}, paid by ${escapeHtml(params.paymentMethod)}.`)}
+
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0;">
+       ${detail("Email", params.customerEmail)}
+       ${detail("Phone", params.customerPhone)}
+       ${detail("Ship to", params.shippingAddress)}
+       ${detail("Placed via", params.placedVia)}
+     </table>
+
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 0;border-top:1px solid #EDE4DA;">
+       ${rows}
+     </table>
+
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
+       ${totalRow("Subtotal", formatBDT(params.subtotal))}
+       ${params.discount > 0 ? totalRow("Discount", `-${formatBDT(params.discount)}`, false, brand) : ""}
+       ${totalRow("Shipping", formatBDT(params.shippingFee))}
+       ${totalRow("Total", formatBDT(params.total), true)}
+     </table>
+
+     ${divider()}
+     ${button("Open in Admin", `${siteUrl}/admin/orders`)}
+     ${note("You are receiving this because you are the store's order inbox.")}`,
+    `${params.customerName} ordered ${formatBDT(params.total)} — ${params.orderNumber}`
+  );
+}

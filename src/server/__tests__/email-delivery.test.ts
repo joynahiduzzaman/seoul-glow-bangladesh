@@ -105,3 +105,63 @@ describe("order confirmation email", () => {
     expect(source.match(/sendOrderConfirmationEmail\(/g)).toHaveLength(1);
   });
 });
+
+describe("store new-order notification", () => {
+  const orders = read("src/server/orders.ts");
+  const emailIndex = read("src/server/email/index.ts");
+
+  it("sends exactly one store alert per order", () => {
+    expect(orders.match(/sendNewOrderAdminEmail\(/g)).toHaveLength(1);
+  });
+
+  it("sends it from the single place an order becomes real", () => {
+    // finalizeOrderEffects is the only path a draft/checkout takes to become a
+    // live order, so anchoring the alert there is what makes it exactly-once.
+    const finalize = orders.slice(orders.indexOf("export async function finalizeOrderEffects"));
+    expect(finalize).toMatch(/sendNewOrderAdminEmail\(/);
+  });
+
+  it("is awaited, so a serverless teardown cannot discard it", () => {
+    expect(orders).toMatch(/await sendNewOrderAdminEmail\(/);
+  });
+
+  it("records a failure on the order instead of swallowing it", () => {
+    expect(orders).toMatch(/Store new-order alert FAILED/);
+  });
+
+  it("does not replace or duplicate the customer confirmation", () => {
+    // Different function, different recipient, different subject.
+    expect(orders.match(/sendOrderConfirmationEmail\(/g)).toHaveLength(1);
+    expect(emailIndex).toMatch(/sendNewOrderAdminEmail[\s\S]*?storeOrderInbox\(\)/);
+    expect(emailIndex).toMatch(/`New order \$\{params\.orderNumber\}/);
+    expect(emailIndex).toMatch(/`Order Confirmed — \$\{params\.orderNumber\}`/);
+  });
+
+  it("goes to the store inbox, not the customer", () => {
+    expect(emailIndex).toMatch(/STORE_ORDER_INBOX = "orders@seoulglowbangladesh\.com"/);
+    // It must take no recipient argument at all — the address is resolved
+    // internally, so no caller can ever aim it at a customer.
+    const start = emailIndex.indexOf("export async function sendNewOrderAdminEmail");
+    const signature = emailIndex.slice(start, emailIndex.indexOf("{", start));
+    expect(signature).toMatch(/^export async function sendNewOrderAdminEmail\(params:/);
+    expect(signature).not.toMatch(/\bto\s*:/);
+  });
+
+  it("is never sent from a cancel, delete or status-change path", () => {
+    for (const file of [
+      "src/app/api/admin/orders/[id]/route.ts",
+      "src/server/order-notifications.ts",
+    ]) {
+      expect(read(file), file).not.toMatch(/sendNewOrderAdminEmail/);
+    }
+  });
+
+  it("cannot fire for a draft, since drafts never reach finalize", () => {
+    // createOrderRecord is the draft-safe path and must stay free of sends.
+    const create = orders.slice(
+      orders.indexOf("export async function createOrderRecord"),
+      orders.indexOf("type FinalizableOrder")
+    );
+    expect(create).not.toMatch(/send[A-Za-z]*Email\(/);
+  });
+});
