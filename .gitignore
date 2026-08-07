@@ -33,6 +33,15 @@ public/uploads/products/*
 .verify-*.mjs
 .prod-*.mjs
 .audit-*.mjs
+.test-*.mjs
+.mkimg.mjs
+.imgs/
+
+# Scratch credentials used while driving the app in a browser during testing.
+# These held a real admin password and a signed session cookie, and neither was
+# covered by any rule above — a `git add -A` would have committed both.
+.tpw
+.session.json
 
 # TypeScript incremental build cache — a build artifact, not source.
 tsconfig.tsbuildinfo
