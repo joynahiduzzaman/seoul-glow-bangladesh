@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useCartStore } from "@/lib/cart-store";
 import { useLocale } from "@/lib/i18n/use-locale";
 import { formatBDT } from "@/lib/utils";
+import { ShoppingBag } from "lucide-react";
 
 interface Props {
   productId: string;
@@ -63,7 +64,10 @@ export default function StickyAddToCart({ productId, name, slug, image, price, s
             {stock === 0 ? (
               <span className="text-xs text-red-500 font-medium shrink-0">{dict.product.outOfStock}</span>
             ) : (
-              <button onClick={handleAdd} className="btn-primary !h-10 !px-6 !text-xs shrink-0">
+              // Same treatment as the in-page button so the two read as one
+              // action; compact height because this bar sits over the content.
+              <button onClick={handleAdd} className="btn-cart !h-11 shrink-0 !px-5 !text-xs sm:!px-6">
+                <ShoppingBag size={15} aria-hidden="true" />
                 {dict.product.addToCart}
               </button>
             )}

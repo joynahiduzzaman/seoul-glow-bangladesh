@@ -221,6 +221,11 @@ export default async function ProductPage({ params }: { params: { slug: string }
         stock={product.stock}
       />
 
+      {/* What it does comes before how to apply it: a shopper still deciding
+          needs the claim first, and the ritual block only matters once they are
+          past that. */}
+      <ProductBenefits benefits={benefits} />
+
       {/* Editorial storytelling block — "The Ritual" */}
       {product.howToUse && (
         <section className="mt-14 md:mt-24 grid md:grid-cols-2 gap-8 md:gap-12 items-center">
@@ -236,8 +241,6 @@ export default async function ProductPage({ params }: { params: { slug: string }
           </div>
         </section>
       )}
-
-      <ProductBenefits benefits={benefits} />
 
       <IngredientHighlights ingredients={ingredientList} />
 

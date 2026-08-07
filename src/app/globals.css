@@ -56,6 +56,27 @@ body {
   @apply inline-flex items-center justify-center gap-2 h-12 rounded-xl bg-[#A35252] px-7 text-sm font-medium text-white shadow-e2 transition-all duration-300 ease-silk hover:bg-[#954B4B] hover:shadow-e3 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none;
 }
 
+/* The product page's primary commitment: Add to Cart.
+   It previously used .btn-outline while Buy Now took .btn-primary, so the main
+   action on the page was the quieter of the two. This is deliberately the
+   loudest control on the site — a richer gradient, a larger tap target and a
+   lift on hover — without inventing a new hue: both stops are the same rose as
+   .btn-primary, the darker one only for depth. White holds 5.40:1 on #A35252
+   and improves as the gradient darkens, so the label stays readable across it.
+   Disabled drops the gradient entirely rather than fading it, because a
+   translucent red still reads as "pressable". */
+.btn-cart {
+  @apply relative inline-flex h-[52px] items-center justify-center gap-2 overflow-hidden rounded-xl
+         bg-gradient-to-br from-[#B05858] via-[#A35252] to-[#8E4747]
+         px-7 text-sm font-semibold text-white shadow-e2
+         transition-all duration-300 ease-silk
+         hover:-translate-y-0.5 hover:from-[#A04C4C] hover:via-[#954B4B] hover:to-[#7D3F3F] hover:shadow-e4
+         active:translate-y-0 active:scale-[0.98] active:shadow-e2
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-gold focus-visible:ring-offset-2
+         disabled:translate-y-0 disabled:cursor-not-allowed disabled:from-ink/25 disabled:via-ink/25
+         disabled:to-ink/25 disabled:text-white/80 disabled:shadow-none;
+}
+
 /* Outline variant: the label is text on cream, so it needs the text-safe accent
    (5.58:1) rather than `rose-gold` (2.65:1). The border keeps the brand tone —
    a border is not text and carries no contrast requirement. Hover inverts to the
