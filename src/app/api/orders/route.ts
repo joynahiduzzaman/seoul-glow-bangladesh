@@ -101,7 +101,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    await finalizeOrderEffects(order, verifiedItems, shipping.name);
+    // The only caller that alerts the store: this is a customer placing an
+    // order, which is the thing the team needs to be told about. The admin's own
+    // manual-order and confirm-draft actions deliberately stay silent.
+    await finalizeOrderEffects(order, verifiedItems, shipping.name, { notifyStore: true });
 
     // Cash on Delivery needs no gateway redirect — order confirmed immediately.
     if (paymentMethod === "COD") {

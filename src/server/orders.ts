@@ -201,7 +201,19 @@ type FinalizableOrder = {
 export async function finalizeOrderEffects(
   order: FinalizableOrder,
   verifiedItems: VerifiedLine[],
-  customerName: string
+  customerName: string,
+  /**
+   * `notifyStore` alerts the store inbox that an order came in. Off unless a
+   * caller asks for it, so it can only ever be sent by a path that has decided
+   * it should be: the storefront checkout does, the admin's own manual-order and
+   * confirm-draft actions do not — the team does not need emailing about an
+   * order they just typed in themselves.
+   *
+   * Opt-in rather than opt-out on purpose: a new call site that forgets this
+   * stays silent, where the opposite default would quietly start mailing the
+   * store from somewhere nobody intended.
+   */
+  opts: { notifyStore?: boolean } = {}
 ) {
   for (const item of verifiedItems) {
     await adjustStock(item.productId, -item.quantity, `Order ${order.orderNumber} placed`);
@@ -256,7 +268,8 @@ export async function finalizeOrderEffects(
     await logOrderEvent(order.id, "NOTE", "No email address on this order — no confirmation sent.", "system");
   }
 
-  // Store-side alert. Sent from the one place an order becomes real, so it
+  // Store-side alert, only for callers that asked for one — in practice the
+  // storefront checkout. Sent from the one place an order becomes real, so it
   // fires exactly once per order and cannot fire for a draft, a failed
   // checkout, or an order that is later cancelled or deleted — none of those
   // paths reach here. Separate recipient and subject from the customer's
@@ -266,32 +279,37 @@ export async function finalizeOrderEffects(
   // on the order: a store alert that quietly stops arriving is exactly the kind
   // of failure nobody notices until an order is missed. It can never fail the
   // order — send() resolves rather than throwing, and the catch covers the rest.
-  const storeAlert = await sendNewOrderAdminEmail({
-    orderNumber: order.orderNumber,
-    customerName,
-    customerEmail: recipientEmail ?? null,
-    customerPhone: order.shippingPhone ?? order.guestPhone ?? null,
-    shippingAddress: [order.shippingStreet, order.shippingArea, order.shippingDistrict]
-      .filter(Boolean)
-      .join(", ") || null,
-    items: verifiedItems.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })),
-    subtotal: order.subtotal,
-    discount: order.discount,
-    shippingFee: order.shippingFee,
-    total: order.total,
-    paymentMethod: order.paymentMethod,
-    placedVia: order.source || "Online checkout",
-  }).catch((err: unknown) => ({ sent: false, error: err }));
+  // Scoped with an `if`, never an early return: the customer's in-app
+  // notification is sent below, and returning here would silently drop it for
+  // every admin-created order.
+  if (opts.notifyStore) {
+    const storeAlert = await sendNewOrderAdminEmail({
+      orderNumber: order.orderNumber,
+      customerName,
+      customerEmail: recipientEmail ?? null,
+      customerPhone: order.shippingPhone ?? order.guestPhone ?? null,
+      shippingAddress: [order.shippingStreet, order.shippingArea, order.shippingDistrict]
+        .filter(Boolean)
+        .join(", ") || null,
+      items: verifiedItems.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })),
+      subtotal: order.subtotal,
+      discount: order.discount,
+      shippingFee: order.shippingFee,
+      total: order.total,
+      paymentMethod: order.paymentMethod,
+      placedVia: order.source || "Online checkout",
+    }).catch((err: unknown) => ({ sent: false, error: err }));
 
-  if (!storeAlert.sent) {
-    const reason = (storeAlert.error as { message?: string })?.message ?? String(storeAlert.error ?? "unknown error");
-    console.error(`[order ${order.orderNumber}] store notification failed:`, reason);
-    await logOrderEvent(
-      order.id,
-      "NOTE",
-      `Store new-order alert FAILED: ${reason.slice(0, 300)}`,
-      "system"
-    );
+    if (!storeAlert.sent) {
+      const reason = (storeAlert.error as { message?: string })?.message ?? String(storeAlert.error ?? "unknown error");
+      console.error(`[order ${order.orderNumber}] store notification failed:`, reason);
+      await logOrderEvent(
+        order.id,
+        "NOTE",
+        `Store new-order alert FAILED: ${reason.slice(0, 300)}`,
+        "system"
+      );
+    }
   }
 
   if (order.userId) {

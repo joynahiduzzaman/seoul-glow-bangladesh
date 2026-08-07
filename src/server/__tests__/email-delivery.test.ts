@@ -121,6 +121,55 @@ describe("store new-order notification", () => {
     expect(finalize).toMatch(/sendNewOrderAdminEmail\(/);
   });
 
+  it("only fires for callers that opt in", () => {
+    expect(orders).toMatch(/opts: \{ notifyStore\?: boolean \} = \{\}/);
+    expect(orders).toMatch(/if \(opts\.notifyStore\) \{/);
+  });
+
+  it("is opt-in, so a caller that says nothing stays silent", () => {
+    // Guards the default: flipping it would start mailing the store from every
+    // path that finalizes an order.
+    expect(orders).not.toMatch(/notifyStore\?: boolean \} = \{ notifyStore: true \}/);
+    expect(orders).not.toMatch(/opts\.notifyStore \?\?\s*true/);
+  });
+
+  it("is opted into by the storefront checkout only", () => {
+    expect(read("src/app/api/orders/route.ts")).toMatch(
+      /finalizeOrderEffects\([^)]*\{ notifyStore: true \}\)/
+    );
+  });
+
+  it("is not opted into by either admin order path", () => {
+    for (const file of [
+      "src/app/api/admin/orders/route.ts",
+      "src/app/api/admin/orders/[id]/confirm/route.ts",
+    ]) {
+      const source = read(file);
+      expect(source, file).toMatch(/finalizeOrderEffects\(/);
+      expect(source, file).not.toMatch(/notifyStore/);
+    }
+  });
+
+  it("skips the alert with a branch, not an early return", () => {
+    // An early return here would also skip the customer's in-app notification
+    // that follows it, silently breaking admin-created orders.
+    const finalize = orders.slice(orders.indexOf("export async function finalizeOrderEffects"));
+    expect(finalize).not.toMatch(/if \(!opts\.notifyStore\) return/);
+    const guardIndex = finalize.indexOf("if (opts.notifyStore) {");
+    const notifyIndex = finalize.indexOf("notifyUser({");
+    expect(guardIndex).toBeGreaterThan(-1);
+    expect(notifyIndex).toBeGreaterThan(guardIndex);
+  });
+
+  it("leaves the customer confirmation on every path", () => {
+    // The confirmation must sit outside the notifyStore branch entirely.
+    const finalize = orders.slice(orders.indexOf("export async function finalizeOrderEffects"));
+    const confirmationIndex = finalize.indexOf("sendOrderConfirmationEmail(");
+    const guardIndex = finalize.indexOf("if (opts.notifyStore) {");
+    expect(confirmationIndex).toBeGreaterThan(-1);
+    expect(confirmationIndex).toBeLessThan(guardIndex);
+  });
+
   it("is awaited, so a serverless teardown cannot discard it", () => {
     expect(orders).toMatch(/await sendNewOrderAdminEmail\(/);
   });
