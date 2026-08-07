@@ -35,15 +35,17 @@ export default function AlphabetIndex({
 
   return (
     <div className="mb-8 sm:mb-10">
-      {/* 26 letters plus a double-width "All" is 28 cells, so a 14-column grid
-          is exactly two rows at every size. Flex-wrap gave a ragged split, and
-          seven columns on a phone stacked it four rows deep.
-          14 columns is past Tailwind's built-in scale, so the track list is
-          written out rather than adding a one-off key to the theme. */}
+      {/* 26 letters plus a double-width "All" is 28 cells: two rows of fourteen,
+          or a single row of twenty-eight once there is width for it.
+          One row only from lg. At the sm container a 28-cell row would leave
+          each cell ~17px, so tablets keep the two-row form; from lg the cells
+          measure ~30px and clear the 24px touch target.
+          These track counts are past Tailwind's built-in scale, so the lists are
+          written out rather than adding one-off keys to the theme. */}
       <div
         role="group"
         aria-label={`Filter ${plural(2)} by first letter`}
-        className="mx-auto grid max-w-4xl grid-cols-[repeat(14,minmax(0,1fr))] gap-0.5 rounded-xl2 border border-rose-gold/20 bg-gradient-to-br from-white via-cream to-soft-pink/40 p-1.5 shadow-e2 sm:gap-2 sm:p-3"
+        className="mx-auto grid max-w-4xl grid-cols-[repeat(14,minmax(0,1fr))] gap-0.5 rounded-xl2 border border-rose-gold/20 bg-gradient-to-br from-white via-cream to-soft-pink/40 p-1.5 shadow-e2 sm:gap-2 sm:p-3 lg:max-w-5xl lg:grid-cols-[repeat(28,minmax(0,1fr))] lg:gap-1"
       >
         <IndexButton
           label="All"
