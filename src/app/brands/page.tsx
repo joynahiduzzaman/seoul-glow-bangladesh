@@ -1,7 +1,7 @@
 import { prisma } from "@/server/db";
 import Link from "next/link";
 import type { Metadata } from "next";
-import BrandCard from "@/components/BrandCard";
+import BrandDirectory from "@/components/BrandDirectory";
 import { SITE_URL } from "@/lib/site-url";
 import { parseJsonArray } from "@/lib/utils";
 
@@ -74,15 +74,7 @@ export default async function BrandsPage() {
         {items.length === 0 ? (
           <p className="py-20 text-center text-body">No brands have been added yet.</p>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:gap-6">
-            {items.map((brand, i) => (
-              <li key={brand.id}>
-                {/* The first row is above the fold on every breakpoint, so those
-                    marks are the LCP candidates. */}
-                <BrandCard brand={brand} priority={i < 4} />
-              </li>
-            ))}
-          </ul>
+          <BrandDirectory brands={items} />
         )}
 
         {stocked.length > 0 && (

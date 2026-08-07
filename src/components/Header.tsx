@@ -143,8 +143,11 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
               links={BRAND_LINKS}
               image="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80"
               caption="Direct from South Korea's most-loved skincare labels."
-              ctaLabel="Shop All Brands"
-              ctaHref="/shop"
+              // Pointed at /shop, so a button reading "All Brands" dropped the
+              // visitor on the unfiltered product grid — the brand directory it
+              // promises now exists, so it goes there.
+              ctaLabel="View All Brands"
+              ctaHref="/brands"
             />
             <MegaMenu
               label={dict.nav.skincare}
