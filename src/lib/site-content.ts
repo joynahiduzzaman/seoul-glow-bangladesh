@@ -52,6 +52,10 @@ export interface PageDef {
   /** Public URL, shown in the admin as a "view live" link. */
   path: string;
   description: string;
+  /** Other routes that render this content and must be purged when it changes —
+   *  `path` alone isn't enough for content that also appears elsewhere. Use a
+   *  route pattern (`/blog/[slug]`) for dynamic segments, not a concrete URL. */
+  alsoRevalidate?: string[];
   groups: FieldGroup[];
 }
 
@@ -504,6 +508,9 @@ export const PAGE_DEFS: PageDef[] = [
     label: "Blog",
     path: "/blog",
     description: "Write and edit the journal articles, including each article's photo.",
+    // An article shows up in three places: the journal index, its own page, and
+    // the homepage's "Latest From the Journal" rail.
+    alsoRevalidate: ["/blog/[slug]", "/"],
     groups: [
       {
         title: "Page Header",

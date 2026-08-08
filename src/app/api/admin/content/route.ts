@@ -1,14 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db";
 import { getCurrentUser } from "@/server/auth";
 import { z } from "zod";
-import { BUSINESS_DEFAULTS, getPageDef } from "@/lib/site-content";
+import { BUSINESS_DEFAULTS, getPageDef, type PageDef } from "@/lib/site-content";
 import { invalidateBusinessInfo, invalidatePageContent } from "@/server/content";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
   if (!user || !["ADMIN", "MANAGER"].includes(user.role)) return null;
   return user;
+}
+
+/**
+ * Purge the rendered pages that show this content, not just the cached read.
+ *
+ * invalidatePageContent clears the data cache, which is what getPageContent
+ * reads through — but the storefront routes that called it keep their own
+ * rendered output until something tells them otherwise. Every other admin write
+ * on the site (brands, categories, homepage sections) already pairs its write
+ * with revalidatePath for exactly this reason; the content editor was the one
+ * that didn't, which is why an admin who had just saved saw the new version and
+ * everyone else went on seeing the old one until the 5-minute window lapsed.
+ */
+function revalidateFor(def: PageDef) {
+  invalidatePageContent(def.key);
+  revalidatePath(def.path);
+  for (const extra of def.alsoRevalidate || []) {
+    // "page" for a dynamic segment like /blog/[slug] — without the hint Next
+    // treats the brackets as a literal path and purges nothing.
+    revalidatePath(extra, extra.includes("[") ? "page" : undefined);
+  }
 }
 
 // A field value is either a plain string or a list of string-keyed rows —
@@ -47,6 +69,9 @@ export async function PUT(req: NextRequest) {
       )
     );
     invalidateBusinessInfo();
+    // The phone number, address and socials sit in the footer, which is in the
+    // root layout — so this one really does affect every page.
+    revalidatePath("/", "layout");
     return NextResponse.json({ success: true });
   }
 
@@ -62,7 +87,7 @@ export async function PUT(req: NextRequest) {
     create: { pageKey: target, content: JSON.stringify(clean) },
     update: { content: JSON.stringify(clean) },
   });
-  invalidatePageContent(target);
+  revalidateFor(def);
 
   return NextResponse.json({ success: true });
 }
@@ -78,10 +103,14 @@ export async function DELETE(req: NextRequest) {
   if (target === "business") {
     await prisma.siteSetting.deleteMany({});
     invalidateBusinessInfo();
+    revalidatePath("/", "layout");
   } else {
-    if (!getPageDef(target)) return NextResponse.json({ error: "Unknown page" }, { status: 404 });
+    const def = getPageDef(target);
+    if (!def) return NextResponse.json({ error: "Unknown page" }, { status: 404 });
     await prisma.pageContent.deleteMany({ where: { pageKey: target } });
-    invalidatePageContent(target);
+    // Resetting to the shipped defaults has to reach the storefront just as a
+    // save does, or the page keeps rendering the copy you just discarded.
+    revalidateFor(def);
   }
   return NextResponse.json({ success: true });
 }
