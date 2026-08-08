@@ -1,4 +1,5 @@
 import type { ContentValues } from "./site-content";
+import { BLOG_POSTS, postToRow } from "./blog-posts";
 
 // The copy each page shipped with. Kept in its own module (rather than inline in
 // site-content.ts) purely for readability — the field *definitions* describe the
@@ -223,5 +224,14 @@ export const PAGE_DEFAULTS: Record<string, ContentValues> = {
       { title: "9. Changes to This Policy", body: "We may update this Privacy Policy from time to time to reflect changes in our practices or for legal reasons. Continued use of the site after changes are posted constitutes acceptance of the revised policy." },
       { title: "10. Contact Us", body: "Questions about this Privacy Policy or how your data is handled? Reach us through our [Contact page](/contact) — we're happy to help." },
     ],
+  },
+
+  blog: {
+    eyebrow: "Skincare Journal",
+    title: "Stories, routines, and ingredient deep-dives.",
+    intro: "Practical Korean skincare guidance, written for Bangladesh's climate — not translated marketing copy.",
+    // Derived from the shipped articles rather than retyped, so the prose has
+    // exactly one home. src/lib/blog-posts.ts is that home.
+    posts: BLOG_POSTS.map(postToRow),
   },
 };

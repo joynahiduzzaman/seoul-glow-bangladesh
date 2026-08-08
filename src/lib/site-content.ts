@@ -498,6 +498,56 @@ export const PAGE_DEFS: PageDef[] = [
       },
     ],
   },
+
+  {
+    key: "blog",
+    label: "Blog",
+    path: "/blog",
+    description: "Write and edit the journal articles, including each article's photo.",
+    groups: [
+      {
+        title: "Page Header",
+        fields: [
+          { key: "eyebrow", label: "Eyebrow", type: "text" },
+          { key: "title", label: "Headline", type: "text" },
+          { key: "intro", label: "Intro text", type: "textarea" },
+        ],
+      },
+      {
+        title: "Articles",
+        description:
+          "The newest article (by date) becomes the large featured card at the top of /blog. Categories are generated from whatever you type here — reuse the same spelling to group articles together.",
+        fields: [
+          {
+            key: "posts",
+            label: "Articles",
+            type: "list",
+            itemLabel: "Add article",
+            itemFields: [
+              { key: "title", label: "Title", type: "text" },
+              {
+                key: "slug",
+                label: "URL slug",
+                type: "text",
+                hint: "The web address: /blog/your-slug. Lowercase letters, numbers and hyphens. Leave blank to build one from the title.",
+              },
+              { key: "image", label: "Article photo", type: "image" },
+              { key: "excerpt", label: "Excerpt", type: "textarea", hint: "The one- or two-line summary on the article card." },
+              { key: "category", label: "Category", type: "text", hint: "e.g. Routines, Ingredients, Guides" },
+              { key: "author", label: "Author", type: "text" },
+              { key: "date", label: "Date", type: "text", hint: "YYYY-MM-DD — this also decides the order articles appear in." },
+              {
+                key: "body",
+                label: "Article text",
+                type: "textarea",
+                hint: "Leave a blank line between paragraphs.",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export function getPageDef(key: string): PageDef | undefined {

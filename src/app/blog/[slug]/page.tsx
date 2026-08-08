@@ -2,28 +2,31 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Clock, ArrowLeft, ArrowRight } from "lucide-react";
-import { getBlogPost, BLOG_POSTS, getReadingTime, getRelatedPosts, formatBlogDate } from "@/lib/blog-posts";
+import { getReadingTime, getRelatedPosts, formatBlogDate } from "@/lib/blog-posts";
+import { getBlogPosts } from "@/server/blog";
 import ScrollReveal from "@/components/ScrollReveal";
 import Newsletter from "@/components/Newsletter";
 import { getLocale } from "@/lib/i18n/get-locale";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { Metadata } from "next";
 
-export function generateStaticParams() {
-  return BLOG_POSTS.map((p) => ({ slug: p.slug }));
-}
+// Articles are admin-editable now, so the set of slugs isn't known at build
+// time. Pages render on demand and revalidate, which is also what lets a newly
+// published article appear without a redeploy.
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const post = getBlogPost(params.slug);
+  const post = (await getBlogPosts()).find((p) => p.slug === params.slug);
   if (!post) return {};
   return { title: post.title, description: post.excerpt, openGraph: { images: [post.image] } };
 }
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = getBlogPost(params.slug);
+export default async function BlogPostPage({ params }: { params: { slug: string } }) {
+  const posts = await getBlogPosts();
+  const post = posts.find((p) => p.slug === params.slug);
   if (!post) return notFound();
 
-  const related = getRelatedPosts(post);
+  const related = getRelatedPosts(posts, post);
   const dict = getDictionary(getLocale());
 
   return (

@@ -24,6 +24,7 @@ export interface SectionDefinition {
   hasBlogSelection?: boolean; // postLimit + auto/manual mode + post picker
   hasViewAllButton?: boolean; // show/hide + label + URL for the section's "View all" link
   hasCountdown?: boolean; // flash-sale-style countdown toggle
+  hasImage?: boolean; // a single uploadable image stored on settings.image
 }
 
 export const SECTION_DEFINITIONS: SectionDefinition[] = [
@@ -127,8 +128,12 @@ export const SECTION_DEFINITIONS: SectionDefinition[] = [
     label: "Authenticity / Why Choose Us",
     description: "Trust-building section — direct sourcing, authenticity guarantee, delivery promise.",
     isCustom: false,
-    defaultSettings: { title: "", subtitle: "" },
+    // The side photo was hardcoded to a stock image with no way to change it —
+    // an odd thing to be stuck with on the section that argues you're the real
+    // importer. Blank falls back to that original image.
+    defaultSettings: { title: "", subtitle: "", image: "" },
     hasTitleSubtitle: true,
+    hasImage: true,
   },
   {
     key: "testimonials",

@@ -1,15 +1,24 @@
+import Image from "next/image";
 import { ShieldCheck, Truck, RotateCcw } from "lucide-react";
 import { Dictionary } from "@/lib/i18n/dictionaries";
+
+/** The stock photo this section shipped with. Only used until an admin uploads
+ *  their own in the Homepage Builder — a shop selling its own authenticity
+ *  should be able to show its own shelf. */
+export const DEFAULT_AUTHENTICITY_IMAGE =
+  "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=900&q=80";
 
 export default function WhyChooseUsEditorial({
   dict,
   title,
   subtitle,
+  image,
   backgroundColor,
 }: {
   dict: Dictionary;
   title?: string;
   subtitle?: string;
+  image?: string;
   backgroundColor?: string;
 }) {
   const items = [
@@ -22,11 +31,12 @@ export default function WhyChooseUsEditorial({
     <section className="container-px mx-auto section-py" style={backgroundColor ? { backgroundColor } : undefined}>
       <div className="grid md:grid-cols-[1fr_1.2fr] gap-12 items-center">
         <div className="relative aspect-[4/5] rounded-xl2 overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=900&q=80"
+          <Image
+            src={image?.trim() || DEFAULT_AUTHENTICITY_IMAGE}
             alt=""
-            className="h-full w-full object-cover"
+            fill
+            sizes="(max-width: 768px) 100vw, 40vw"
+            className="object-cover"
           />
         </div>
         <div>

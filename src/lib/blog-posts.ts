@@ -1,3 +1,10 @@
+// The articles the site shipped with, plus the pure helpers the blog pages use.
+//
+// These are no longer the live list: articles are editable content now, stored
+// as rows on the `blog` PageContent record and edited at /admin/content/blog —
+// photo upload included. This array is the default that record merges over, so
+// a shop that has never touched the journal still renders exactly these three.
+// Read the live list with getBlogPosts() (src/server/blog.ts), never from here.
 export interface BlogPost {
   slug: string;
   title: string;
@@ -60,8 +67,8 @@ export function getBlogPost(slug: string) {
   return BLOG_POSTS.find((p) => p.slug === slug);
 }
 
-export function getCategories() {
-  return Array.from(new Set(BLOG_POSTS.map((p) => p.category)));
+export function getCategories(posts: BlogPost[]) {
+  return Array.from(new Set(posts.map((p) => p.category).filter(Boolean)));
 }
 
 /** ~200 words/minute, rounded up to a whole minute, minimum 1. */
@@ -70,10 +77,93 @@ export function getReadingTime(post: BlogPost) {
   return Math.max(1, Math.ceil(words / 200));
 }
 
-export function getRelatedPosts(post: BlogPost, limit = 3) {
-  const sameCategory = BLOG_POSTS.filter((p) => p.slug !== post.slug && p.category === post.category);
-  const rest = BLOG_POSTS.filter((p) => p.slug !== post.slug && p.category !== post.category);
+export function getRelatedPosts(posts: BlogPost[], post: BlogPost, limit = 3) {
+  const sameCategory = posts.filter((p) => p.slug !== post.slug && p.category === post.category);
+  const rest = posts.filter((p) => p.slug !== post.slug && p.category !== post.category);
   return [...sameCategory, ...rest].slice(0, limit);
+}
+
+// ---------------------------------------------------------------------------
+// Content-row <-> BlogPost
+// ---------------------------------------------------------------------------
+
+/** A placeholder is used rather than dropping the article: an admin who adds an
+ *  article and saves before uploading its photo should see the article, not
+ *  have it silently vanish from /blog. */
+const PLACEHOLDER_IMAGE = "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=1200&q=80";
+
+export function slugifyTitle(title: string) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** Serialise a shipped post into the row shape the content editor stores. */
+export function postToRow(post: BlogPost): Record<string, string> {
+  return {
+    title: post.title,
+    slug: post.slug,
+    image: post.image,
+    excerpt: post.excerpt,
+    category: post.category,
+    author: post.author,
+    date: post.date,
+    body: post.content.join("\n\n"),
+  };
+}
+
+/**
+ * Turn saved editor rows into renderable articles, newest first.
+ *
+ * Everything here is defensive because these rows are hand-typed in an admin
+ * form: an untitled row is dropped, a missing slug is generated from the title,
+ * a duplicate slug is suffixed (two articles sharing one URL would make the
+ * second unreachable), and a blank date sorts last rather than as an invalid
+ * Date. Paragraphs are split on blank lines, which is how the field's hint
+ * tells the admin to write them.
+ */
+export function rowsToPosts(rows: Array<Record<string, string>>): BlogPost[] {
+  const seen = new Set<string>();
+  const posts: BlogPost[] = [];
+
+  for (const row of rows) {
+    const title = (row.title || "").trim();
+    if (!title) continue;
+
+    let slug = slugifyTitle(row.slug || title);
+    if (!slug) continue;
+    if (seen.has(slug)) {
+      let n = 2;
+      while (seen.has(`${slug}-${n}`)) n++;
+      slug = `${slug}-${n}`;
+    }
+    seen.add(slug);
+
+    posts.push({
+      slug,
+      title,
+      excerpt: (row.excerpt || "").trim(),
+      image: (row.image || "").trim() || PLACEHOLDER_IMAGE,
+      author: (row.author || "").trim() || "Seoul Glow Editorial",
+      category: (row.category || "").trim() || "Journal",
+      date: (row.date || "").trim(),
+      content: (row.body || "")
+        .split(/\n\s*\n/)
+        .map((p) => p.trim())
+        .filter(Boolean),
+    });
+  }
+
+  return posts.sort((a, b) => {
+    const ta = Date.parse(a.date);
+    const tb = Date.parse(b.date);
+    if (Number.isNaN(ta) && Number.isNaN(tb)) return 0;
+    if (Number.isNaN(ta)) return 1;
+    if (Number.isNaN(tb)) return -1;
+    return tb - ta;
+  });
 }
 
 export function formatBlogDate(iso: string) {

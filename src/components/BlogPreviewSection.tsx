@@ -1,9 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Clock } from "lucide-react";
-import { BLOG_POSTS, getReadingTime } from "@/lib/blog-posts";
+import { getReadingTime, type BlogPost } from "@/lib/blog-posts";
+import { SectionHeading, SectionViewAll } from "./SectionHeading";
 
+// `allPosts` is passed in rather than imported: articles are admin-editable
+// content read from the database now, and this component also renders inside
+// the admin's client-side section preview, which can't await a server read.
 export default function BlogPreviewSection({
+  allPosts,
   title,
   subtitle,
   postLimit = 3,
@@ -14,6 +19,7 @@ export default function BlogPreviewSection({
   viewAllUrl,
   backgroundColor,
 }: {
+  allPosts: BlogPost[];
   title?: string;
   subtitle?: string;
   postLimit?: number;
@@ -26,24 +32,18 @@ export default function BlogPreviewSection({
 }) {
   const posts =
     mode === "manual" && postSlugs.length > 0
-      ? postSlugs.map((slug) => BLOG_POSTS.find((p) => p.slug === slug)).filter((p): p is (typeof BLOG_POSTS)[number] => Boolean(p))
-      : BLOG_POSTS.slice(0, postLimit);
+      ? postSlugs.map((slug) => allPosts.find((p) => p.slug === slug)).filter((p): p is BlogPost => Boolean(p))
+      : allPosts.slice(0, postLimit);
 
   if (posts.length === 0) return null;
 
   return (
     <section className="container-px mx-auto section-py" style={backgroundColor ? { backgroundColor } : undefined}>
-      <div className="flex items-end justify-between mb-10">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-gold-text font-semibold mb-3">{subtitle || "Skincare Journal"}</p>
-          <h2 className="section-title">{title || "Latest From the Journal"}</h2>
-        </div>
-        {showViewAll && (
-          <Link href={viewAllUrl || "/blog"} className="link-tap text-sm text-rose-gold-text hover:underline shrink-0">
-            {viewAllText || "View all →"}
-          </Link>
-        )}
-      </div>
+      <SectionHeading
+        eyebrow={subtitle || "Skincare Journal"}
+        title={title || "Latest From the Journal"}
+        description="Routines, ingredients and honest guidance — written for Bangladesh's climate."
+      />
       <div className="grid md:grid-cols-3 gap-6">
         {posts.slice(0, postLimit).map((post) => (
           <Link key={post.slug} href={`/blog/${post.slug}`} className="group block">
@@ -61,6 +61,7 @@ export default function BlogPreviewSection({
           </Link>
         ))}
       </div>
+      {showViewAll && <SectionViewAll href={viewAllUrl || "/blog"} label={viewAllText} />}
     </section>
   );
 }

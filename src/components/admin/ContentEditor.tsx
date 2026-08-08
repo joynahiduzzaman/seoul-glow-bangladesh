@@ -223,19 +223,27 @@ export default function ContentEditor({
                                 <label className="mb-1 block text-[11px] font-medium text-ink/70">{col.label}</label>
                                 {col.type === "textarea" ? (
                                   <textarea
-                                    rows={2}
+                                    // Four rather than two: rows carry real prose
+                                    // now (an article body, not just an FAQ
+                                    // answer), and the box is still resizable.
+                                    rows={4}
                                     value={row[col.key] || ""}
                                     onChange={(e) => updateRow(field.key, i, col.key, e.target.value)}
                                     className="field resize-y !py-2 !text-[13px]"
                                   />
                                 ) : col.type === "image" ? (
-                                  <SingleImageUpload
-                                    label=""
-                                    value={row[col.key] || ""}
-                                    onChange={(url) => updateRow(field.key, i, col.key, url)}
-                                    aspect={16 / 9}
-                                    maxDimension={2400}
-                                  />
+                                  // Capped like the top-level image field above.
+                                  // Uncapped, one row's photo preview filled the
+                                  // form and buried every field under it.
+                                  <div className="max-w-xs">
+                                    <SingleImageUpload
+                                      label=""
+                                      value={row[col.key] || ""}
+                                      onChange={(url) => updateRow(field.key, i, col.key, url)}
+                                      aspect={16 / 9}
+                                      maxDimension={2400}
+                                    />
+                                  </div>
                                 ) : (
                                   <input
                                     value={row[col.key] || ""}

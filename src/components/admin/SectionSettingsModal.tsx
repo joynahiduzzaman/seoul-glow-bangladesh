@@ -12,7 +12,7 @@ import ScheduleFields from "./homepage/ScheduleFields";
 import SectionPreview from "./homepage/SectionPreview";
 import MultiSelectPicker from "./homepage/MultiSelectPicker";
 import ConfirmDialog from "./ConfirmDialog";
-import { usePickerOptions, blogPostOptions } from "@/lib/admin/use-picker-options";
+import { usePickerOptions } from "@/lib/admin/use-picker-options";
 import { useUndoRedo } from "@/lib/admin/use-undo-redo";
 import { definitionFor } from "@/lib/homepage-sections";
 import { normalizeDesignSettings } from "@/lib/section-design";
@@ -115,6 +115,8 @@ export default function SectionSettingsModal({
         ? "categories"
         : def?.hasBrandSelection
         ? "brands"
+        : def?.hasBlogSelection
+        ? "posts"
         : null
       : null;
   const { options: pickerOptions, loading: pickerLoading } = usePickerOptions(pickerKind as any);
@@ -470,7 +472,8 @@ export default function SectionSettingsModal({
               {def.hasBlogSelection && draft.settings.mode === "manual" && (
                 <MultiSelectPicker
                   label="Choose blog posts"
-                  options={blogPostOptions()}
+                  options={pickerOptions}
+                  loading={pickerLoading}
                   selectedIds={draft.settings.postSlugs || []}
                   onChange={(ids) => set("postSlugs", ids)}
                 />
@@ -495,6 +498,25 @@ export default function SectionSettingsModal({
                       <input placeholder="Button URL (default link)" value={draft.settings.viewAllUrl || ""} onChange={(e) => set("viewAllUrl", e.target.value)} className="rounded-lg border border-ink/10 px-4 py-2.5 text-sm" />
                     </div>
                   )}
+                </div>
+              )}
+
+              {def.hasImage && !isCustomBanner && (
+                <div className="border-t border-border-soft pt-4">
+                  {/* Capped: the section's photo is portrait, and a 4:5 drop zone
+                      at the modal's full width is nearly 900px tall — it would
+                      push everything else out of view. */}
+                  <div className="max-w-[220px]">
+                    <SingleImageUpload
+                      label="Section photo"
+                      value={draft.settings.image || ""}
+                      onChange={(url) => set("image", url)}
+                      aspect={4 / 5}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11px] text-ink/60">
+                    Leave empty to keep the photo the section shipped with.
+                  </p>
                 </div>
               )}
 
@@ -544,7 +566,8 @@ export default function SectionSettingsModal({
                 !def.hasProductSelection &&
                 !def.hasCategorySelection &&
                 !def.hasBrandSelection &&
-                !def.hasBlogSelection && (
+                !def.hasBlogSelection &&
+                !def.hasImage && (
                   <p className="text-xs text-ink/70 bg-beige/60 rounded-lg p-3">
                     This section doesn't have additional content settings — you can still reorder, enable/disable, and adjust Design/Schedule.
                   </p>

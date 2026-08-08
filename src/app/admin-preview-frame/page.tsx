@@ -73,7 +73,7 @@ export default function PreviewFramePage() {
 
   useEffect(() => {
     if (!sectionKey) return;
-    if (sectionKey === "hero" || sectionKey === "blog" || sectionKey.startsWith("customBanner:")) {
+    if (sectionKey === "hero" || sectionKey.startsWith("customBanner:")) {
       setLoading(false);
       return;
     }
@@ -96,6 +96,10 @@ export default function PreviewFramePage() {
       params.set("mode", mode);
       if (mode === "manual") params.set("ids", (settings.brandIds || []).join(","));
       params.set("limit", String(settings.limit || 6));
+    } else if (sectionKey === "blog") {
+      // Articles are editable content now, so the preview reads the live list
+      // instead of a compiled-in array.
+      params.set("type", "posts");
     } else if (sectionKey === "testimonials") {
       params.set("type", "reviews");
       params.set("limit", String(settings.limit || 3));
@@ -216,7 +220,15 @@ export default function PreviewFramePage() {
           />
         );
       case "authenticity":
-        return <WhyChooseUsEditorial dict={ADMIN_DICT} title={settings.title} subtitle={settings.subtitle} backgroundColor={bg} />;
+        return (
+          <WhyChooseUsEditorial
+            dict={ADMIN_DICT}
+            title={settings.title}
+            subtitle={settings.subtitle}
+            image={settings.image}
+            backgroundColor={bg}
+          />
+        );
       case "testimonials":
         return (
           <TestimonialsSection reviews={data?.reviews || []} title={settings.title} subtitle={settings.subtitle} limit={settings.limit || 3} backgroundColor={bg} />
@@ -224,6 +236,8 @@ export default function PreviewFramePage() {
       case "blog":
         return (
           <BlogPreviewSection
+            allPosts={data?.posts || []}
+            postLimit={settings.postLimit || 3}
             title={settings.title}
             subtitle={settings.subtitle}
             mode={settings.mode || "auto"}

@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { parseJsonArray } from "@/lib/utils";
-import { BLOG_POSTS } from "@/lib/blog-posts";
 import { PickerOption } from "@/components/admin/homepage/MultiSelectPicker";
 
-type PickerKind = "products" | "categories" | "brands" | null;
+type PickerKind = "products" | "categories" | "brands" | "posts" | null;
 
 /** Fetches and maps the option list for a manual-selection picker. `kind: null`
  * means "not needed right now" (e.g. mode is "auto") — skips the fetch entirely. */
@@ -17,7 +16,12 @@ export function usePickerOptions(kind: PickerKind): { options: PickerOption[]; l
     if (!kind) return;
     let cancelled = false;
     setLoading(true);
-    const url = kind === "products" ? "/api/admin/products" : "/api/meta";
+    const url =
+      kind === "products"
+        ? "/api/admin/products"
+        : kind === "posts"
+          ? "/api/admin/homepage-sections/preview-data?type=posts"
+          : "/api/meta";
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
@@ -35,6 +39,10 @@ export function usePickerOptions(kind: PickerKind): { options: PickerOption[]; l
           setOptions((data.categories || []).map((c: any) => ({ id: c.id, label: c.name })));
         } else if (kind === "brands") {
           setOptions((data.brands || []).map((b: any) => ({ id: b.id, label: b.name })));
+        } else if (kind === "posts") {
+          // Articles are keyed by slug rather than an id — that's what a blog
+          // section stores in `postSlugs`.
+          setOptions((data.posts || []).map((p: any) => ({ id: p.slug, label: p.title, sublabel: p.category, thumbnail: p.image })));
         }
       })
       .finally(() => {
@@ -46,10 +54,4 @@ export function usePickerOptions(kind: PickerKind): { options: PickerOption[]; l
   }, [kind]);
 
   return { options, loading };
-}
-
-/** Blog posts are static site content (src/lib/blog-posts.ts), not a DB table —
- * no fetch needed, just map them into the same PickerOption shape synchronously. */
-export function blogPostOptions(): PickerOption[] {
-  return BLOG_POSTS.map((p) => ({ id: p.slug, label: p.title, sublabel: p.category, thumbnail: p.image }));
 }

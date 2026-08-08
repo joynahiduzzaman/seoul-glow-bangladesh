@@ -4,6 +4,7 @@ import { prisma } from "@/server/db";
 import { getLocale } from "@/lib/i18n/get-locale";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { getEnabledHomepageSections } from "@/server/homepage";
+import { getBlogPosts } from "@/server/blog";
 import { parseSettings } from "@/lib/homepage-sections";
 import { normalizeDesignSettings, wrapperStyle } from "@/lib/section-design";
 import { parseJsonArray } from "@/lib/utils";
@@ -276,7 +277,15 @@ async function renderSection(section: { sectionKey: string; settings: string }, 
       ) : null;
     }
     case "authenticity":
-      return <WhyChooseUsEditorial dict={dict} title={settings.title} subtitle={settings.subtitle} backgroundColor={bg} />;
+      return (
+        <WhyChooseUsEditorial
+          dict={dict}
+          title={settings.title}
+          subtitle={settings.subtitle}
+          image={settings.image}
+          backgroundColor={bg}
+        />
+      );
     case "testimonials": {
       const topReviews = await getTopReviews();
       return topReviews.length > 0 ? (
@@ -288,6 +297,7 @@ async function renderSection(section: { sectionKey: string; settings: string }, 
     case "blog":
       return (
         <BlogPreviewSection
+          allPosts={await getBlogPosts()}
           title={settings.title}
           subtitle={settings.subtitle}
           mode={settings.mode || "auto"}

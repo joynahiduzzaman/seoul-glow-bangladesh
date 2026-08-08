@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Clock, ArrowRight } from "lucide-react";
-import { BLOG_POSTS, getCategories, getReadingTime, formatBlogDate } from "@/lib/blog-posts";
+import { getCategories, getReadingTime, formatBlogDate } from "@/lib/blog-posts";
+import { getBlogPosts, getBlogPageHeader } from "@/server/blog";
 import ScrollReveal from "@/components/ScrollReveal";
 import Newsletter from "@/components/Newsletter";
 import { getLocale } from "@/lib/i18n/get-locale";
@@ -9,10 +10,11 @@ import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata = { title: "Blog" };
 
-export default function BlogPage({ searchParams }: { searchParams: { category?: string } }) {
+export default async function BlogPage({ searchParams }: { searchParams: { category?: string } }) {
   const activeCategory = searchParams.category;
-  const categories = getCategories();
-  const posts = activeCategory ? BLOG_POSTS.filter((p) => p.category === activeCategory) : BLOG_POSTS;
+  const [allPosts, header] = await Promise.all([getBlogPosts(), getBlogPageHeader()]);
+  const categories = getCategories(allPosts);
+  const posts = activeCategory ? allPosts.filter((p) => p.category === activeCategory) : allPosts;
 
   const [featured, ...rest] = posts;
   const locale = getLocale();
@@ -32,9 +34,9 @@ export default function BlogPage({ searchParams }: { searchParams: { category?: 
     <div>
       <div className="container-px mx-auto section-py">
         <ScrollReveal className="max-w-lg mb-14">
-          <p className="text-xs uppercase tracking-[0.2em] text-gold-text font-semibold mb-4">Skincare Journal</p>
-          <h1 className="section-title mb-3">Stories, routines, and ingredient deep-dives.</h1>
-          <p className="text-body text-sm">Practical Korean skincare guidance, written for Bangladesh's climate — not translated marketing copy.</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-gold-text font-semibold mb-4">{header.eyebrow}</p>
+          <h1 className="section-title mb-3">{header.title}</h1>
+          <p className="text-body text-sm">{header.intro}</p>
         </ScrollReveal>
 
         {/* Category filter */}

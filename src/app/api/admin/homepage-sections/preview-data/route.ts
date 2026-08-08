@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db";
 import { getCurrentUser } from "@/server/auth";
 import { parseJsonArray } from "@/lib/utils";
+import { getBlogPosts } from "@/server/blog";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -81,6 +82,13 @@ export async function GET(req: NextRequest) {
         ? ids.map((id) => all.find((b) => b.id === id)).filter(Boolean).slice(0, limit)
         : all.slice(0, limit);
     return NextResponse.json({ brands });
+  }
+
+  if (type === "posts") {
+    // Articles live in PageContent, not a table — but the preview panel and the
+    // manual post picker are both client-side, so they read them through here.
+    const posts = await getBlogPosts();
+    return NextResponse.json({ posts });
   }
 
   if (type === "reviews") {
