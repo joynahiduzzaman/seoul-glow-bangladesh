@@ -214,3 +214,26 @@ describe("store new-order notification", () => {
     expect(create).not.toMatch(/send[A-Za-z]*Email\(/);
   });
 });
+
+describe("newsletter welcome email", () => {
+  const source = read("src/app/api/newsletter/route.ts");
+
+  it("is awaited, not fired and forgotten", () => {
+    // This was the last detached send left on the site. Nothing surfaces the
+    // failure: the visitor sees "Subscribed!" either way, and the row is
+    // written regardless — so a welcome email that never leaves is invisible.
+    expect(source).toMatch(/await sendNewsletterWelcomeEmail\(/);
+  });
+
+  it("still subscribes the visitor when the mail provider is down", () => {
+    // The send may swallow its own failure — but only because the row is
+    // already written by then. Order matters here.
+    expect(source.indexOf("newsletterSubscriber.upsert")).toBeLessThan(
+      source.indexOf("await sendNewsletterWelcomeEmail(")
+    );
+  });
+
+  it("does not welcome the same address twice", () => {
+    expect(source).toMatch(/if \(!existing\)/);
+  });
+});
