@@ -1,26 +1,28 @@
 import Image from "next/image";
 import { ShieldCheck, Truck, RotateCcw } from "lucide-react";
 import { Dictionary } from "@/lib/i18n/dictionaries";
+import EditorialImageSwiper from "./EditorialImageSwiper";
+import { resolveAuthenticityImages } from "@/lib/section-images";
 
-/** The stock photo this section shipped with. Only used until an admin uploads
- *  their own in the Homepage Builder — a shop selling its own authenticity
- *  should be able to show its own shelf. */
-export const DEFAULT_AUTHENTICITY_IMAGE =
-  "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=900&q=80";
+export { DEFAULT_AUTHENTICITY_IMAGE } from "@/lib/section-images";
 
 export default function WhyChooseUsEditorial({
   dict,
   title,
   subtitle,
   image,
+  images,
   backgroundColor,
 }: {
   dict: Dictionary;
   title?: string;
   subtitle?: string;
+  /** Legacy single-photo key, still honoured. */
   image?: string;
+  images?: string[];
   backgroundColor?: string;
 }) {
+  const photos = resolveAuthenticityImages(images, image);
   const items = [
     { icon: ShieldCheck, title: dict.home.whyAuthentic, desc: dict.home.whyAuthenticDesc },
     { icon: Truck, title: dict.home.whyDelivery, desc: dict.home.whyDeliveryDesc },
@@ -30,14 +32,20 @@ export default function WhyChooseUsEditorial({
   return (
     <section className="container-px mx-auto section-py" style={backgroundColor ? { backgroundColor } : undefined}>
       <div className="grid md:grid-cols-[1fr_1.2fr] gap-12 items-center">
+        {/* Same box either way — the swipe lives inside it, so one photo or
+            five, the section's layout is identical. */}
         <div className="relative aspect-[4/5] rounded-xl2 overflow-hidden">
-          <Image
-            src={image?.trim() || DEFAULT_AUTHENTICITY_IMAGE}
-            alt=""
-            fill
-            sizes="(max-width: 768px) 100vw, 40vw"
-            className="object-cover"
-          />
+          {photos.length > 1 ? (
+            <EditorialImageSwiper images={photos} />
+          ) : (
+            <Image
+              src={photos[0]}
+              alt=""
+              fill
+              sizes="(max-width: 768px) 100vw, 40vw"
+              className="object-cover"
+            />
+          )}
         </div>
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-rose-gold-text font-semibold mb-4">{subtitle || "Why Seoul Glow"}</p>

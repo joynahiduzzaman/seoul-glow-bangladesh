@@ -283,6 +283,7 @@ async function renderSection(section: { sectionKey: string; settings: string }, 
           title={settings.title}
           subtitle={settings.subtitle}
           image={settings.image}
+          images={settings.images}
           backgroundColor={bg}
         />
       );

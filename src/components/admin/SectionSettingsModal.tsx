@@ -243,6 +243,13 @@ export default function SectionSettingsModal({
   // `postSlugs` rather than selectionKey for the blog, which keys by slug.
   const manualKey = selectionKey || "postSlugs";
   const emptyManualSelection = (draft.settings[manualKey] || []).length === 0;
+  // Falls back to the pre-swipe single-photo key so a section saved before the
+  // gallery existed opens with its photo already in the list.
+  const sectionPhotos: string[] = Array.isArray(draft.settings.images) && draft.settings.images.length > 0
+    ? draft.settings.images
+    : draft.settings.image
+    ? [draft.settings.image]
+    : [];
   const isHero = section.sectionKey === "hero";
   const isCustomBanner = section.sectionKey.startsWith("customBanner:");
 
@@ -542,19 +549,20 @@ export default function SectionSettingsModal({
 
               {def.hasImage && !isCustomBanner && (
                 <div className="border-t border-border-soft pt-4">
-                  {/* Capped: the section's photo is portrait, and a 4:5 drop zone
-                      at the modal's full width is nearly 900px tall — it would
-                      push everything else out of view. */}
-                  <div className="max-w-[220px]">
-                    <SingleImageUpload
-                      label="Section photo"
-                      value={draft.settings.image || ""}
-                      onChange={(url) => set("image", url)}
-                      aspect={4 / 5}
-                    />
-                  </div>
+                  <ImageUploadField
+                    label="Section photos"
+                    images={sectionPhotos}
+                    onChange={(next) => {
+                      // Both keys are written: `images` is what the section
+                      // reads, `image` keeps the first photo where an older
+                      // renderer would look for it.
+                      set("images", next);
+                      set("image", next[0] || "");
+                    }}
+                  />
                   <p className="mt-2 text-[11px] text-ink/60">
-                    Leave empty to keep the photo the section shipped with.
+                    Add more than one and visitors can swipe through them. Drag to reorder — the
+                    first is shown first. Leave empty to keep the photo the section shipped with.
                   </p>
                 </div>
               )}

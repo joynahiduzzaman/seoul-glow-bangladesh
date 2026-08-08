@@ -226,6 +226,7 @@ export default function PreviewFramePage() {
             title={settings.title}
             subtitle={settings.subtitle}
             image={settings.image}
+            images={settings.images}
             backgroundColor={bg}
           />
         );

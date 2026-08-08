@@ -24,7 +24,7 @@ export interface SectionDefinition {
   hasBlogSelection?: boolean; // postLimit + auto/manual mode + post picker
   hasViewAllButton?: boolean; // show/hide + label + URL for the section's "View all" link
   hasCountdown?: boolean; // flash-sale-style countdown toggle
-  hasImage?: boolean; // a single uploadable image stored on settings.image
+  hasImage?: boolean; // uploadable photos on settings.images (settings.image is the pre-swipe single-photo key)
 }
 
 export const SECTION_DEFINITIONS: SectionDefinition[] = [
@@ -130,8 +130,10 @@ export const SECTION_DEFINITIONS: SectionDefinition[] = [
     isCustom: false,
     // The side photo was hardcoded to a stock image with no way to change it —
     // an odd thing to be stuck with on the section that argues you're the real
-    // importer. Blank falls back to that original image.
-    defaultSettings: { title: "", subtitle: "", image: "" },
+    // importer. Empty falls back to that original image. `image` (singular) is
+    // kept in the defaults because sections saved before the swipe existed
+    // still carry it, and the renderer reads it as the first photo.
+    defaultSettings: { title: "", subtitle: "", image: "", images: [] },
     hasTitleSubtitle: true,
     hasImage: true,
   },
