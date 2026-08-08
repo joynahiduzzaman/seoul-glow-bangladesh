@@ -50,6 +50,14 @@ interface DraftState {
 type Tab = "content" | "design" | "schedule" | "history" | "preview";
 const AUTOSAVE_DELAY_MS = 1500;
 
+/** What this section is a list of, for the selection-mode copy. */
+const SELECTION_NOUN: Record<string, string> = {
+  products: "products",
+  categories: "categories",
+  brands: "brands",
+  posts: "articles",
+};
+
 const PRODUCT_LIMIT_LABEL: Record<string, string> = {
   featuredProducts: "Product limit",
   flashSale: "Product limit",
@@ -225,6 +233,16 @@ export default function SectionSettingsModal({
   }
 
   const selectionKey = def.hasProductSelection ? "productIds" : def.hasCategorySelection ? "categoryIds" : def.hasBrandSelection ? "brandIds" : null;
+  const selectionNoun = def.hasProductSelection
+    ? "products"
+    : def.hasCategorySelection
+    ? "categories"
+    : def.hasBrandSelection
+    ? "brands"
+    : "posts";
+  // `postSlugs` rather than selectionKey for the blog, which keys by slug.
+  const manualKey = selectionKey || "postSlugs";
+  const emptyManualSelection = (draft.settings[manualKey] || []).length === 0;
   const isHero = section.sectionKey === "hero";
   const isCustomBanner = section.sectionKey.startsWith("customBanner:");
 
@@ -432,30 +450,51 @@ export default function SectionSettingsModal({
 
               {(def.hasProductSelection || def.hasCategorySelection || def.hasBrandSelection || def.hasBlogSelection) && (
                 <div>
-                  <label className="block text-[11px] text-ink/70 mb-1.5">Selection mode</label>
-                  <div className="flex gap-2">
+                  <label className="block text-[11px] text-ink/70 mb-1.5">
+                    Which {SELECTION_NOUN[selectionNoun]} show here?
+                  </label>
+                  {/* Two buttons reading "Auto" and "Manual" with the explanation
+                      in grey underneath didn't tell anyone that hand-picking was
+                      possible at all — the whole feature was invisible. Each
+                      option says what it does on the button now. */}
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => set("mode", "auto")}
-                      className={`flex-1 rounded-lg border px-4 py-2.5 text-sm transition-colors ${
-                        (draft.settings.mode || "auto") === "auto" ? "border-rose-gold bg-rose-gold/10 text-rose-gold" : "border-ink/10 text-ink/70"
+                      className={`rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                        (draft.settings.mode || "auto") === "auto" ? "border-rose-gold bg-rose-gold/10" : "border-ink/10 hover:border-ink/25"
                       }`}
                     >
-                      Auto
+                      <span className={`block text-sm font-medium ${(draft.settings.mode || "auto") === "auto" ? "text-rose-gold-text" : "text-ink"}`}>
+                        Choose for me
+                      </span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-ink/60">
+                        Picks automatically, newest first.
+                      </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => set("mode", "manual")}
-                      className={`flex-1 rounded-lg border px-4 py-2.5 text-sm transition-colors ${
-                        draft.settings.mode === "manual" ? "border-rose-gold bg-rose-gold/10 text-rose-gold" : "border-ink/10 text-ink/70"
+                      className={`rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                        draft.settings.mode === "manual" ? "border-rose-gold bg-rose-gold/10" : "border-ink/10 hover:border-ink/25"
                       }`}
                     >
-                      Manual
+                      <span className={`block text-sm font-medium ${draft.settings.mode === "manual" ? "text-rose-gold-text" : "text-ink"}`}>
+                        I&apos;ll pick them
+                      </span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-ink/60">
+                        Hand-pick exactly which ones show.
+                      </span>
                     </button>
                   </div>
-                  <p className="text-[11px] text-ink/35 mt-1">
-                    Auto pulls the newest matching items automatically. Manual lets you hand-pick exactly which ones show.
-                  </p>
+                  {/* Switching to manual and picking nothing quietly behaves like
+                      auto, which reads as the setting having been ignored. */}
+                  {draft.settings.mode === "manual" && emptyManualSelection && (
+                    <p className="mt-2 rounded-lg bg-gold/10 px-3 py-2 text-[11px] leading-relaxed text-ink/70">
+                      Nothing picked yet — until you tick some below, this section keeps showing
+                      {" "}{SELECTION_NOUN[selectionNoun]} automatically.
+                    </p>
+                  )}
                 </div>
               )}
 

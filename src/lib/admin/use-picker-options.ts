@@ -6,6 +6,9 @@ import { PickerOption } from "@/components/admin/homepage/MultiSelectPicker";
 
 type PickerKind = "products" | "categories" | "brands" | "posts" | null;
 
+const countLabel = (n: number | undefined) =>
+  typeof n === "number" ? (n === 1 ? "1 product" : `${n} products`) : undefined;
+
 /** Fetches and maps the option list for a manual-selection picker. `kind: null`
  * means "not needed right now" (e.g. mode is "auto") — skips the fetch entirely. */
 export function usePickerOptions(kind: PickerKind): { options: PickerOption[]; loading: boolean } {
@@ -36,9 +39,26 @@ export function usePickerOptions(kind: PickerKind): { options: PickerOption[]; l
             }))
           );
         } else if (kind === "categories") {
-          setOptions((data.categories || []).map((c: any) => ({ id: c.id, label: c.name })));
+          // Thumbnail and count included: picking six of sixteen categories by
+          // name alone means recognising them from a list of bare words, and
+          // an empty one is exactly what you don't want on the homepage.
+          setOptions(
+            (data.categories || []).map((c: any) => ({
+              id: c.id,
+              label: c.name,
+              sublabel: countLabel(c.productCount),
+              thumbnail: c.image || undefined,
+            }))
+          );
         } else if (kind === "brands") {
-          setOptions((data.brands || []).map((b: any) => ({ id: b.id, label: b.name })));
+          setOptions(
+            (data.brands || []).map((b: any) => ({
+              id: b.id,
+              label: b.name,
+              sublabel: countLabel(b.productCount),
+              thumbnail: b.logo || undefined,
+            }))
+          );
         } else if (kind === "posts") {
           // Articles are keyed by slug rather than an id — that's what a blog
           // section stores in `postSlugs`.

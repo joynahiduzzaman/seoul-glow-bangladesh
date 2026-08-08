@@ -65,7 +65,11 @@ export default function MultiSelectPicker({
             <label key={o.id} className="flex items-center gap-2.5 px-3 py-2 text-xs cursor-pointer hover:bg-beige/40">
               <input type="checkbox" checked={selectedIds.includes(o.id)} onChange={() => toggle(o.id)} className="shrink-0" />
               {o.thumbnail ? (
-                <img src={o.thumbnail} alt="" className="h-7 w-7 rounded object-cover shrink-0" />
+                // contain, not cover: brand logos are wordmarks of wildly
+                // different proportions, and cropping one to a square is what
+                // makes a picker of logos unreadable.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={o.thumbnail} alt="" className="h-7 w-7 shrink-0 rounded bg-white object-contain" />
               ) : (
                 <span className="h-7 w-7 rounded bg-beige shrink-0" />
               )}
