@@ -18,6 +18,7 @@ import { Star, ShieldCheck, Droplet, Target, AlertTriangle } from "lucide-react"
 import Image from "next/image";
 import type { Metadata } from "next";
 import { ROUTINE_STEPS } from "@/lib/routine";
+import { PRODUCT_TEXTURE_LABELS, type ProductTexture } from "@/lib/product-texture";
 
 export const revalidate = 60; // ISR: catalog pages regenerate at most once a minute instead of on every request
 
@@ -94,6 +95,18 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const ingredientList = product.ingredients
     ? product.ingredients.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
+  // Only what's actually filled in — an admin who leaves the weight blank
+  // shouldn't get an empty "Net Weight —" row on the storefront.
+  const specs = [
+    product.volumeMl ? { label: "Size", value: `${product.volumeMl} ml` } : null,
+    product.weightGrams ? { label: "Net Weight", value: `${product.weightGrams} g` } : null,
+    // The stored value is the enum ("GEL"); customers get the label the
+    // comparison table already uses for it.
+    product.texture
+      ? { label: "Texture", value: PRODUCT_TEXTURE_LABELS[product.texture as ProductTexture] ?? product.texture }
+      : null,
+  ].filter((s): s is { label: string; value: string } => Boolean(s));
+
   const finalPrice = discountedPrice(product.price, product.discountPercent);
   const avgRating =
     product.reviews.length > 0
@@ -194,6 +207,21 @@ export default async function ProductPage({ params }: { params: { slug: string }
                 </div>
               )}
             </div>
+          )}
+
+          {/* Size, net weight and texture were all being captured in the admin
+              form and stored, and none of them were ever shown — so the weight
+              an admin typed into Shipping Details went in and vanished. They
+              sit above Add to Cart because size is a buying decision. */}
+          {specs.length > 0 && (
+            <dl className="mb-6 flex flex-wrap gap-x-8 gap-y-3 border-y border-border-soft py-4">
+              {specs.map(({ label, value }) => (
+                <div key={label}>
+                  <dt className="text-[11px] uppercase tracking-[0.12em] text-ink/50">{label}</dt>
+                  <dd className="mt-0.5 text-sm font-medium text-ink">{value}</dd>
+                </div>
+              ))}
+            </dl>
           )}
 
           <div id="main-add-to-cart">

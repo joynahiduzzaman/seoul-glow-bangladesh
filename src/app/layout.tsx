@@ -13,6 +13,7 @@ import MessengerChat from "@/components/MessengerChat";
 import ReferralCapture from "@/components/ReferralCapture";
 import StorefrontChrome from "@/components/StorefrontChrome";
 import { getBusinessInfo } from "@/server/content";
+import { getMenuImages } from "@/server/menu-images";
 import { safeJsonLd } from "@/lib/utils";
 import type { BusinessInfo } from "@/lib/site-content";
 import Analytics from "@/components/Analytics";
@@ -119,7 +120,7 @@ function buildOrganizationJsonLd(business: BusinessInfo) {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = getLocale();
   const dict = getDictionary(locale);
-  const business = await getBusinessInfo();
+  const [business, menuImages] = await Promise.all([getBusinessInfo(), getMenuImages()]);
   const organizationJsonLd = buildOrganizationJsonLd(business);
 
   return (
@@ -138,7 +139,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Shop-only chrome — see StorefrontChrome for why the admin panel and
             print routes render without it. */}
         <StorefrontChrome>
-          <Header locale={locale} dict={dict} />
+          <Header locale={locale} dict={dict} menuImages={menuImages} />
         </StorefrontChrome>
         {/* A full-viewport floor, not 60vh: while a long page streams in, the
             browser paints whatever has parsed so far. At 60vh the footer landed

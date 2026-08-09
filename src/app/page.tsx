@@ -242,7 +242,10 @@ async function renderSection(section: { sectionKey: string; settings: string }, 
               .map((id: string) => all.find((b) => b.id === id))
               .filter((b: typeof all[number] | undefined): b is typeof all[number] => Boolean(b))
               .slice(0, limit)
-          : all.slice(0, limit);
+          : // Stocked brands first, same rule the category wall follows — a
+            // homepage tile that leads to an empty shelf is a dead end, and
+            // several brands are set up ahead of their first shipment.
+            [...all].sort((a, b) => Number(b.productCount > 0) - Number(a.productCount > 0)).slice(0, limit);
       return <FeaturedBrands brands={brands} title={settings.title} subtitle={settings.subtitle} backgroundColor={bg} />;
     }
     case "newArrivals": {

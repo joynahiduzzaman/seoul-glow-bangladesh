@@ -14,6 +14,10 @@ import MegaMenu from "./MegaMenu";
 import AccountMenu, { type SessionUser } from "./AccountMenu";
 import NotificationBell from "./NotificationBell";
 
+// Only reached by a shop with nothing in its catalogue yet — the moment a
+// product exists, both panels use its photography instead.
+const MENU_IMAGE_FALLBACK = "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80";
+
 const BRAND_LINKS = [
   { label: "COSRX", href: "/brands/cosrx" },
   { label: "Beauty of Joseon", href: "/brands/beauty-of-joseon" },
@@ -32,7 +36,17 @@ const CATEGORY_LINKS = [
   { label: "Masks", href: "/shop?category=masks" },
 ];
 
-export default function Header({ locale, dict }: { locale: Locale; dict: Dictionary }) {
+export default function Header({
+  locale,
+  dict,
+  menuImages,
+}: {
+  locale: Locale;
+  dict: Dictionary;
+  /** Real shop photography for the two mega-menu panels. Stock stand-ins were
+   *  shipped here; a shop with its own catalogue should show its own. */
+  menuImages?: { brands?: string | null; categories?: string | null };
+}) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -53,11 +67,13 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
     setMounted(true);
   }, []);
 
+  // Flash Sale is off the nav by request. The /shop?filter=flashsale route and
+  // the homepage section both still work — only the nav entry is gone, so a
+  // running sale is still reachable from its own band and from any link to it.
   const NAV_LINKS = [
     { label: dict.nav.shopAll, href: "/shop" },
     { label: dict.nav.bestSellers, href: "/shop?filter=bestseller" },
     { label: dict.nav.newArrivals, href: "/shop?filter=new" },
-    { label: dict.nav.flashSale, href: "/shop?filter=flashsale" },
   ];
 
   useEffect(() => {
@@ -154,7 +170,7 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
               label={dict.nav.brands}
               triggerHref="/brands"
               links={BRAND_LINKS}
-              image="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80"
+              image={menuImages?.brands || MENU_IMAGE_FALLBACK}
               caption="Direct from South Korea's most-loved skincare labels."
               // Pointed at /shop, so a button reading "All Brands" dropped the
               // visitor on the unfiltered product grid — the brand directory it
@@ -169,7 +185,7 @@ export default function Header({ locale, dict }: { locale: Locale; dict: Diction
               // unfiltered product grid. Both now open the category directory.
               triggerHref="/categories"
               links={CATEGORY_LINKS}
-              image="https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=500&q=80"
+              image={menuImages?.categories || MENU_IMAGE_FALLBACK}
               caption="Build your routine, one step at a time."
               ctaLabel="View All Categories"
               ctaHref="/categories"

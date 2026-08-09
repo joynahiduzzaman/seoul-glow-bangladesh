@@ -2,17 +2,34 @@ import Link from "next/link";
 import Image from "next/image";
 import { Facebook, Instagram, Mail, MapPin, MessageCircle, ShieldCheck, Truck, BadgeCheck } from "lucide-react";
 import { Dictionary, Locale } from "@/lib/i18n/dictionaries";
+import { unstable_cache } from "next/cache";
+import { prisma } from "@/server/db";
+import { parseJsonArray } from "@/lib/utils";
 import { getBusinessInfo } from "@/server/content";
 import NewsletterFooterForm from "./NewsletterFooterForm";
 
-// Same real product photography used in InstagramSection.tsx — a compact preview here,
-// not a fabricated "as featured in" wall or invented press/award badges.
-const INSTAGRAM_PREVIEW = [
-  "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=200&q=80",
-  "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=200&q=80",
-  "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?auto=format&fit=crop&w=200&q=80",
-  "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=200&q=80",
-];
+/**
+ * The four-up strip under "Follow @…" used to be stock photography, which on a
+ * real shop reads as four Instagram posts that were never posted. It shows the
+ * shop's own products now. If nothing is in the catalogue yet the strip is
+ * simply omitted rather than filled with something borrowed.
+ */
+const getFooterPhotos = unstable_cache(
+  async () => {
+    const products = await prisma.product.findMany({
+      where: { status: "ACTIVE", images: { not: "[]" } },
+      orderBy: [{ isBestSeller: "desc" }, { createdAt: "desc" }],
+      take: 8,
+      select: { images: true },
+    });
+    return products
+      .map((p) => parseJsonArray(p.images)[0])
+      .filter((url): url is string => Boolean(url))
+      .slice(0, 4);
+  },
+  ["footer-instagram-preview"],
+  { revalidate: 300 }
+);
 
 const PAYMENT_METHODS = [
   { label: "Cash on Delivery" },
@@ -29,7 +46,7 @@ const TRUST_STRIP = [
 export default async function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   // Contact details come from the admin-editable Business Info rather than
   // build-time env vars, so changing the phone number is a content edit.
-  const business = await getBusinessInfo();
+  const [business, instagramPreview] = await Promise.all([getBusinessInfo(), getFooterPhotos()]);
   const instagramUrl = business.instagramUrl;
   const whatsappNumber = business.phone.replace(/\D/g, "");
 
@@ -127,8 +144,9 @@ export default async function Footer({ locale, dict }: { locale: Locale; dict: D
             >
               Follow @{business.instagramHandle}
             </a>
+            {instagramPreview.length > 0 && (
             <div className="grid grid-cols-4 gap-1.5">
-              {INSTAGRAM_PREVIEW.map((img, i) => (
+              {instagramPreview.map((img, i) => (
                 // aria-label is required, not cosmetic: the only child is a
                 // decorative image, so without it a screen reader announces
                 // these as four unlabelled "link" elements.
@@ -145,6 +163,7 @@ export default async function Footer({ locale, dict }: { locale: Locale; dict: D
                 </a>
               ))}
             </div>
+            )}
           </div>
         </div>
       </div>
