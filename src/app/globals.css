@@ -141,9 +141,15 @@ body {
 
 /* Shared control surface for text inputs / selects / textareas so every form on
    the site (checkout, auth, account, contact, admin) has identical height,
-   radius, border and focus treatment instead of each page re-declaring them. */
+   radius, border and focus treatment instead of each page re-declaring them.
+
+   min-w-0 matters as much as w-full here. A text input's intrinsic minimum is
+   its `size` attribute — about 178px — and grid and flex items default to
+   `min-width: auto`, so a two-column row of these refused to shrink below
+   372px and pushed the mobile checkout 3px past the viewport. w-full alone
+   does not override that floor. */
 .field {
-  @apply w-full rounded-xl border border-border-soft bg-white px-4 py-3 text-sm text-ink
+  @apply w-full min-w-0 rounded-xl border border-border-soft bg-white px-4 py-3 text-sm text-ink
          placeholder:text-ink/35 transition-all duration-200
          hover:border-ink/20
          focus:border-rose-gold focus:outline-none focus:ring-4 focus:ring-rose-gold/10;

@@ -238,8 +238,12 @@ export default function CheckoutPage() {
 
       <CheckoutSteps current={step} onStepClick={setStep} />
 
-      <div className="grid md:grid-cols-[1fr_360px] gap-6 md:gap-10">
-        <div>
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_360px] gap-6 md:gap-10">
+        {/* min-w-0: a grid item defaults to `min-width: auto`, so this column
+            sized itself to its widest content instead of to the track and hung
+            3px past the right edge of a 390px phone — on checkout, of all
+            pages. The track is already 1fr; this just lets it be honoured. */}
+        <div className="min-w-0">
           {step === 1 && (
             <section>
               <h2 className="font-display text-xl mb-4">{dict.checkout.shippingInfo}</h2>
