@@ -97,7 +97,12 @@ export default function StatCard({
       </div>
 
       <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/70">{label}</p>
-      <p className="mt-1 font-display text-[1.75rem] font-semibold leading-tight text-ink tabular-nums">{value}</p>
+      {/* Steps up with the card. At the display size these cards use on a
+          desktop, a five-figure currency value overflowed a narrow card on a
+          phone or tablet — and it's the money figures that most need reading. */}
+      <p className="mt-1 font-display text-xl font-semibold leading-tight text-ink tabular-nums xl:text-[1.75rem]">
+        {value}
+      </p>
       {hint && <p className="mt-1 text-xs text-ink/70">{hint}</p>}
 
       {href && (

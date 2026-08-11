@@ -3,11 +3,11 @@ import { Suspense } from "react";
 import { prisma } from "@/server/db";
 import { formatBDT } from "@/lib/utils";
 import { ORDER_STATUSES, PAYMENT_STATUSES } from "@/lib/order-status";
-import { ShoppingBag, Wallet, Clock, PackageSearch, CalendarCheck, Search, Plus, FilePlus2 } from "lucide-react";
+import { ShoppingBag, Wallet, Clock, PackageSearch, CalendarCheck, Search, Plus, FilePlus2, HandCoins } from "lucide-react";
 import StatCard from "@/components/admin/StatCard";
 import SortSelect from "@/components/admin/SortSelect";
 import OrdersTableClient from "@/components/admin/OrdersTableClient";
-import { revenueWhere } from "@/server/revenue";
+import { revenueWhere, pipelineWhere } from "@/server/revenue";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +68,7 @@ export default async function AdminOrdersPage({
     needsFulfillmentCount,
     draftCount,
     revenueAgg,
+    pipelineAgg,
   ] = await Promise.all([
     prisma.order.findMany({
       where,
@@ -84,12 +85,37 @@ export default async function AdminOrdersPage({
     prisma.order.count({ where: { status: { in: ["CONFIRMED", "PACKED"] } } }),
     prisma.order.count({ where: { status: "DRAFT" } }),
     prisma.order.aggregate({ where: revenueWhere, _sum: { total: true } }),
+    // Committed but not yet collected. On a cash-on-delivery shop, Total
+    // Revenue counts delivered orders only — correct, but with everything
+    // still in transit it reads as "nothing sold". This is the other half of
+    // the picture, reported separately so the two are never added together.
+    prisma.order.aggregate({ where: pipelineWhere, _sum: { total: true }, _count: true }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const pipelineTotal = pipelineAgg._sum.total || 0;
+  const pipelineCount = pipelineAgg._count || 0;
   const STATS = [
     { icon: ShoppingBag, label: "Total Orders", value: totalOrders, tone: "default" as const },
-    { icon: Wallet, label: "Total Revenue", value: formatBDT(revenueAgg._sum.total || 0), tone: "success" as const },
+    {
+      icon: Wallet,
+      label: "Total Revenue",
+      value: formatBDT(revenueAgg._sum.total || 0),
+      tone: "success" as const,
+      // Says out loud what the number counts, so BDT 0 reads as "nothing
+      // delivered yet" rather than "nothing sold".
+      hint: "Delivered orders only",
+    },
+    {
+      icon: HandCoins,
+      label: "Pending Collection",
+      value: formatBDT(pipelineTotal),
+      tone: pipelineTotal > 0 ? ("info" as const) : ("default" as const),
+      // No href: "pending collection" spans four statuses and the tabs below
+      // filter one at a time, so any link would land on a list totalling less
+      // than the card claims.
+      hint: pipelineCount === 1 ? "1 order awaiting delivery" : `${pipelineCount} orders awaiting delivery`,
+    },
     { icon: Clock, label: "Pending", value: pendingCount, tone: "warning" as const },
     { icon: PackageSearch, label: "Needs Fulfillment", value: needsFulfillmentCount, tone: "default" as const },
     { icon: FilePlus2, label: "Draft Orders", value: draftCount, tone: draftCount > 0 ? "warning" as const : "default" as const },
@@ -115,9 +141,14 @@ export default async function AdminOrdersPage({
       </div>
 
       {/* Dashboard cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      {/* Column counts are set by what a five-figure currency value needs, not
+          by how many cards there are. Seven across squeezed each to 125px at
+          1280px, and the old 3-across tablet step gave 141px — both narrower
+          than "BDT 35,790" renders, so the very number this row exists to show
+          was the one getting cut off. Four is the most that fits. */}
+      <div className="grid grid-cols-1 gap-4 mb-6 min-[360px]:grid-cols-2 lg:grid-cols-4">
         {STATS.map((s) => (
-          <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} tone={s.tone} />
+          <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} tone={s.tone} hint={s.hint} />
         ))}
       </div>
 

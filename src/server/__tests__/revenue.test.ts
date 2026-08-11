@@ -157,3 +157,52 @@ describe("affiliate commissions follow the order's fate", () => {
     }
   });
 });
+
+/**
+ * The orders page shows Total Revenue and Pending Collection side by side. The
+ * whole point is that they are two different rules — the moment either one is
+ * re-derived locally instead of imported, they can drift apart, which is the
+ * exact defect the shared module above was created to end.
+ */
+describe("the orders page reports both figures from the shared rules", () => {
+  const page = readFileSync(path.join(process.cwd(), "src/app/admin/orders/page.tsx"), "utf8");
+
+  it("imports both filters rather than listing statuses inline", () => {
+    expect(page).toMatch(/import \{[^}]*revenueWhere[^}]*pipelineWhere[^}]*\} from "@\/server\/revenue"/);
+  });
+
+  it("sums Pending Collection with the pipeline filter", () => {
+    expect(page).toMatch(/aggregate\(\{\s*where: pipelineWhere/);
+    expect(page).toMatch(/label: "Pending Collection"/);
+  });
+
+  it("keeps Total Revenue on the delivered-only filter", () => {
+    expect(page).toMatch(/aggregate\(\{ where: revenueWhere/);
+  });
+
+  it("says on the card what Total Revenue counts", () => {
+    // BDT 0 next to real orders reads as "nothing sold" without this.
+    expect(page).toMatch(/hint: "Delivered orders only"/);
+  });
+
+  it("never adds the two together", () => {
+    expect(page).not.toMatch(/pipelineTotal \+ .*revenueAgg|revenueAgg[^;]*\+ pipelineTotal/);
+  });
+});
+
+describe("the two figures cannot overlap", () => {
+  it("no status is both earned revenue and pending collection", () => {
+    // If one ever appeared in both, the same money would be counted twice on
+    // the same screen.
+    const both = REVENUE_STATUSES.filter((s) => PIPELINE_STATUSES.includes(s));
+    expect(both).toEqual([]);
+  });
+
+  it("every status is accounted for as revenue, pipeline, or neither on purpose", () => {
+    const neither = ORDER_STATUSES.filter(
+      (s) => !REVENUE_STATUSES.includes(s) && !PIPELINE_STATUSES.includes(s)
+    );
+    // Draft was never confirmed; the other three are terminal non-sales.
+    expect(neither.sort()).toEqual(["CANCELLED", "DRAFT", "REFUNDED", "RETURNED"]);
+  });
+});
