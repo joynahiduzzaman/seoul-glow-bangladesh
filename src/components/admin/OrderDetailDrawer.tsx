@@ -148,6 +148,12 @@ export default function OrderDetailDrawer({
   const [savingShipment, setSavingShipment] = useState(false);
   const [savingDeliveryStatus, setSavingDeliveryStatus] = useState(false);
 
+  // Discount + courier charge
+  const [discountDraft, setDiscountDraft] = useState(0);
+  const [shippingDraft, setShippingDraft] = useState(0);
+  const [applyCourier, setApplyCourier] = useState(true);
+  const [savingPricing, setSavingPricing] = useState(false);
+
   // Payment record form
   const [paymentMethodDraft, setPaymentMethodDraft] = useState<(typeof PAYMENT_METHODS)[number]>("COD");
   const [paymentAmountDraft, setPaymentAmountDraft] = useState("");
@@ -181,6 +187,10 @@ export default function OrderDetailDrawer({
         setTrackingDraft(shipment?.trackingNumber || "");
         setEstimatedDeliveryDraft(shipment?.estimatedDelivery ? shipment.estimatedDelivery.slice(0, 10) : "");
         setShippingNotesDraft(shipment?.shippingNotes || "");
+        setDiscountDraft(data.order.discount || 0);
+        setShippingDraft(data.order.shippingFee || 0);
+        // A courier charge of zero is what "not applied" looks like once saved.
+        setApplyCourier((data.order.shippingFee || 0) > 0);
         const verifiedTotal = (data.order.payments as Payment[])
           .filter((p) => p.verificationStatus === "VERIFIED")
           .reduce((sum, p) => sum + p.amount, 0);
@@ -398,8 +408,44 @@ export default function OrderDetailDrawer({
     }
   }
 
+  async function savePricing() {
+    if (!order) return;
+    const shippingFee = applyCourier ? shippingDraft : 0;
+    setSavingPricing(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discount: discountDraft, shippingFee }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update the total");
+      // Re-read rather than patching local state: the server recomputes the
+      // total and writes a timeline entry, and both need to show here.
+      const fresh = await fetch(`/api/admin/orders/${order.id}`).then((r) => r.json());
+      setOrder(fresh.order);
+      setDiscountDraft(fresh.order.discount || 0);
+      setShippingDraft(fresh.order.shippingFee || 0);
+      setApplyCourier((fresh.order.shippingFee || 0) > 0);
+      toast.success(`Total updated to ${formatBDT(fresh.order.total)}`);
+      // Keeps the orders table row in step with the new total.
+      onUpdated?.(fresh.order);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update the total");
+    } finally {
+      setSavingPricing(false);
+    }
+  }
+
   const isOpen = orderId !== null;
   const verifiedTotal = order ? order.payments.filter((p) => p.verificationStatus === "VERIFIED").reduce((sum, p) => sum + p.amount, 0) : 0;
+  // Once an order is delivered, returned, refunded or cancelled the amount owed
+  // is settled — editing it then would silently rewrite history.
+  const priceEditable = order ? !["DELIVERED", "RETURNED", "REFUNDED", "CANCELLED"].includes(order.status) : false;
+  const draftTotal = order ? Math.max(0, order.subtotal - discountDraft + (applyCourier ? shippingDraft : 0)) : 0;
+  const pricingDirty =
+    order != null &&
+    (discountDraft !== order.discount || (applyCourier ? shippingDraft : 0) !== order.shippingFee);
   const shipmentUnchanged =
     order?.shipment != null &&
     courierDraft === order.shipment.courier &&
@@ -812,9 +858,84 @@ export default function OrderDetailDrawer({
                         <span>Discount {order.couponCode && `(${order.couponCode})`}</span><span>-{formatBDT(order.discount)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-ink/70"><span>Shipping</span><span>{formatBDT(order.shippingFee)}</span></div>
+                    <div className="flex justify-between text-ink/70"><span>Courier charge</span><span>{formatBDT(order.shippingFee)}</span></div>
                     <div className="flex justify-between font-semibold text-base pt-1.5 border-t border-border-soft"><span>Total</span><span>{formatBDT(order.total)}</span></div>
                   </div>
+
+                  {/* Both figures used to be set once at checkout and never
+                      again — a discount agreed on the phone, or a delivery
+                      charge waived, meant cancelling and re-recording the
+                      order. They're editable here until it's delivered. */}
+                  {priceEditable ? (
+                    <div className="mt-4 rounded-xl border border-border-soft bg-beige/25 p-4">
+                      <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/70">Adjust total</h5>
+                      <label className="mb-1.5 block text-[11px] text-ink/70" htmlFor="order-discount">
+                        Discount (BDT)
+                      </label>
+                      <input
+                        id="order-discount"
+                        type="number"
+                        min={0}
+                        max={order.subtotal + shippingDraft}
+                        value={discountDraft}
+                        onChange={(e) => setDiscountDraft(Math.max(0, Number(e.target.value) || 0))}
+                        className="w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm tabular-nums"
+                      />
+
+                      <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={applyCourier}
+                          onChange={(e) => {
+                            setApplyCourier(e.target.checked);
+                            // Restore the amount this order was actually placed
+                            // with rather than a zone rate, which may have
+                            // changed since.
+                            setShippingDraft(e.target.checked ? order.shippingFee || 0 : 0);
+                          }}
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-[#A35252]"
+                        />
+                        <span>
+                          Apply courier charge
+                          <span className="mt-0.5 block text-[11px] font-normal text-ink/60">
+                            Untick to deliver this order free of charge.
+                          </span>
+                        </span>
+                      </label>
+                      {applyCourier && (
+                        <input
+                          type="number"
+                          min={0}
+                          value={shippingDraft}
+                          onChange={(e) => setShippingDraft(Math.max(0, Number(e.target.value) || 0))}
+                          aria-label="Courier charge (BDT)"
+                          className="mt-2 w-full rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm tabular-nums"
+                        />
+                      )}
+
+                      <div className="mt-3 flex items-center justify-between border-t border-border-soft pt-3 text-sm">
+                        <span className="text-ink/70">New total</span>
+                        <span className="font-semibold tabular-nums">{formatBDT(draftTotal)}</span>
+                      </div>
+                      {discountDraft > order.subtotal + shippingDraft && (
+                        <p className="mt-2 text-xs text-badge-sale">
+                          The discount is more than this order is worth. It can bring the total to zero, not below.
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={savePricing}
+                        disabled={!pricingDirty || savingPricing || discountDraft > order.subtotal + shippingDraft}
+                        className="btn-primary mt-3 h-10 w-full !text-[13px] disabled:opacity-40"
+                      >
+                        {savingPricing ? "Saving…" : pricingDirty ? "Save total" : "No changes"}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="mt-4 rounded-lg bg-beige/50 px-3 py-2.5 text-[11px] leading-relaxed text-ink/70">
+                      This order is {order.status.toLowerCase()} — its total is settled and can no longer be edited.
+                    </p>
+                  )}
                 </div>
 
                 {/* Internal notes composer */}

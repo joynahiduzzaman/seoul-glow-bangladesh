@@ -40,6 +40,12 @@ export default function ManualOrderForm() {
   const [couponResult, setCouponResult] = useState<{ valid: boolean; discount?: number; message?: string } | null>(null);
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   const [manualDiscount, setManualDiscount] = useState(0);
+  // Two separate decisions, and they used to be one control: whether the
+  // customer is charged for delivery at all, and — if they are — whether the
+  // amount is the zone rate or something the admin types. Waiving delivery
+  // previously meant ticking "override" and typing 0, which reads as a fee of
+  // zero rather than as no fee.
+  const [applyCourierCharge, setApplyCourierCharge] = useState(true);
   const [shippingOverrideEnabled, setShippingOverrideEnabled] = useState(false);
   const [shippingOverride, setShippingOverride] = useState(0);
   const [giftNote, setGiftNote] = useState("");
@@ -62,7 +68,8 @@ export default function ManualOrderForm() {
   }
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const shippingFee = shippingOverrideEnabled ? shippingOverride : shippingFeeFor(shipping.insideDhaka);
+  const autoCourier = shippingFeeFor(shipping.insideDhaka);
+  const shippingFee = !applyCourierCharge ? 0 : shippingOverrideEnabled ? shippingOverride : autoCourier;
   const discount = Math.min((couponResult?.valid ? couponResult.discount || 0 : 0) + (manualDiscount || 0), subtotal + shippingFee);
   const total = Math.max(0, subtotal - discount + shippingFee);
 
@@ -110,7 +117,9 @@ export default function ManualOrderForm() {
           giftNote: giftNote || undefined,
           couponCode: couponResult?.valid ? couponCode.trim() : undefined,
           manualDiscount: manualDiscount || undefined,
-          shippingFeeOverride: shippingOverrideEnabled ? shippingOverride : undefined,
+          // 0 has to be sent explicitly — `undefined` means "use the zone rate",
+          // which is the opposite of waiving the charge.
+          shippingFeeOverride: !applyCourierCharge ? 0 : shippingOverrideEnabled ? shippingOverride : undefined,
           paymentMethod,
           paymentStatus,
           source,
@@ -211,8 +220,20 @@ export default function ManualOrderForm() {
             <p className="text-xs text-success mb-3 flex items-center gap-1"><Tag size={12} /> {couponCode.toUpperCase()} applied — {formatBDT(couponResult.discount || 0)} off</p>
           )}
           <div>
-            <label className="block text-[11px] text-ink/70 mb-1.5">Manual discount (BDT, on top of any coupon)</label>
-            <input type="number" min={0} value={manualDiscount || ""} onChange={(e) => setManualDiscount(Number(e.target.value) || 0)} placeholder="0" className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm" />
+            {/* htmlFor/id: the label was floating free, so the field had no
+                accessible name and clicking the label didn't focus it. */}
+            <label htmlFor="manual-discount" className="block text-[11px] text-ink/70 mb-1.5">
+              Manual discount (BDT, on top of any coupon)
+            </label>
+            <input
+              id="manual-discount"
+              type="number"
+              min={0}
+              value={manualDiscount || ""}
+              onChange={(e) => setManualDiscount(Number(e.target.value) || 0)}
+              placeholder="0"
+              className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm tabular-nums"
+            />
           </div>
         </section>
 
@@ -250,15 +271,52 @@ export default function ManualOrderForm() {
         </section>
 
         <section className="bg-white rounded-xl2 shadow-soft p-5">
-          <h3 className="text-sm font-semibold mb-3">Shipping Charge</h3>
-          <label className="flex items-center gap-2 text-sm mb-2">
-            <input type="checkbox" checked={shippingOverrideEnabled} onChange={(e) => { setShippingOverrideEnabled(e.target.checked); setShippingOverride(shippingFeeFor(shipping.insideDhaka)); }} />
-            Override auto-calculated fee
+          <h3 className="text-sm font-semibold mb-3">Courier Charge</h3>
+          <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+            <input
+              type="checkbox"
+              checked={applyCourierCharge}
+              onChange={(e) => setApplyCourierCharge(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#A35252]"
+            />
+            <span>
+              Apply courier charge
+              <span className="mt-0.5 block text-[11px] font-normal text-ink/60">
+                Untick to deliver this order free of charge.
+              </span>
+            </span>
           </label>
-          {shippingOverrideEnabled ? (
-            <input type="number" min={0} value={shippingOverride} onChange={(e) => setShippingOverride(Number(e.target.value) || 0)} className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm" />
+
+          {applyCourierCharge ? (
+            <div className="mt-3 border-t border-border-soft pt-3">
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={shippingOverrideEnabled}
+                  onChange={(e) => { setShippingOverrideEnabled(e.target.checked); setShippingOverride(autoCourier); }}
+                  className="h-4 w-4 shrink-0 accent-[#A35252]"
+                />
+                Charge a different amount
+              </label>
+              {shippingOverrideEnabled ? (
+                <input
+                  type="number"
+                  min={0}
+                  value={shippingOverride}
+                  onChange={(e) => setShippingOverride(Number(e.target.value) || 0)}
+                  aria-label="Courier charge"
+                  className="mt-2 w-full rounded-lg border border-ink/10 px-3 py-2 text-sm tabular-nums"
+                />
+              ) : (
+                <p className="mt-2 text-xs text-ink/70">
+                  {formatBDT(autoCourier)} — the {shipping.insideDhaka ? "inside" : "outside"} Dhaka rate.
+                </p>
+              )}
+            </div>
           ) : (
-            <p className="text-xs text-ink/70">Auto: {formatBDT(shippingFeeFor(shipping.insideDhaka))} ({shipping.insideDhaka ? "inside" : "outside"} Dhaka)</p>
+            <p className="mt-3 rounded-lg bg-beige/60 px-3 py-2 text-xs text-ink/70">
+              No courier charge on this order — the customer pays {formatBDT(0)} for delivery.
+            </p>
           )}
         </section>
 
@@ -267,7 +325,7 @@ export default function ManualOrderForm() {
           <div className="text-sm space-y-1.5">
             <div className="flex justify-between text-ink/70"><span>Subtotal</span><span>{formatBDT(subtotal)}</span></div>
             {discount > 0 && <div className="flex justify-between text-rose-gold"><span>Discount</span><span>-{formatBDT(discount)}</span></div>}
-            <div className="flex justify-between text-ink/70"><span>Shipping</span><span>{formatBDT(shippingFee)}</span></div>
+            <div className="flex justify-between text-ink/70"><span>Courier charge</span><span>{formatBDT(shippingFee)}</span></div>
             <div className="flex justify-between font-semibold text-base pt-1.5 border-t border-border-soft"><span>Total</span><span>{formatBDT(total)}</span></div>
           </div>
           <div className="mt-4 space-y-2">

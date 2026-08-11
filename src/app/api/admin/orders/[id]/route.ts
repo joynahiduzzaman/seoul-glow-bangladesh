@@ -12,7 +12,15 @@ const schema = z.object({
   status: z.enum(ORDER_STATUSES).optional(),
   paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
   assignedStaffId: z.string().nullable().optional(),
+  // Money. Both columns already existed and were set once at checkout with no
+  // way to correct them afterwards — a customer haggling on the phone, or a
+  // waived delivery charge, meant cancelling and re-recording the whole order.
+  discount: z.number().min(0).optional(),
+  shippingFee: z.number().min(0).optional(),
 });
+
+/** Statuses past which the amount owed is settled and shouldn't drift. */
+const PRICE_LOCKED_STATUSES = ["DELIVERED", "RETURNED", "REFUNDED", "CANCELLED"];
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -81,7 +89,54 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (parsed.data.paymentStatus !== undefined) data.paymentStatus = parsed.data.paymentStatus;
   if (parsed.data.assignedStaffId !== undefined) data.assignedStaffId = parsed.data.assignedStaffId || null;
 
+  // --- discount / courier charge -------------------------------------------
+  const changingMoney = parsed.data.discount !== undefined || parsed.data.shippingFee !== undefined;
+  if (changingMoney) {
+    if (PRICE_LOCKED_STATUSES.includes(existing.status)) {
+      return NextResponse.json(
+        { error: `This order is ${existing.status.toLowerCase()} — its total can no longer be changed.` },
+        { status: 400 }
+      );
+    }
+    const discount = parsed.data.discount ?? existing.discount;
+    const shippingFee = parsed.data.shippingFee ?? existing.shippingFee;
+    // The subtotal is the sum of the line items and is not editable here, so it
+    // is the ceiling: a discount can bring an order to zero but never below,
+    // and never turns into money owed back.
+    if (discount > existing.subtotal + shippingFee) {
+      return NextResponse.json(
+        { error: `Discount can't be more than the order's ${existing.subtotal + shippingFee} BDT of items and delivery.` },
+        { status: 400 }
+      );
+    }
+    data.discount = discount;
+    data.shippingFee = shippingFee;
+    // Recomputed, never trusted from the client — the browser sends the two
+    // inputs, the server decides what is owed.
+    data.total = Math.max(0, existing.subtotal - discount + shippingFee);
+  }
+
   const order = await prisma.order.update({ where: { id: params.id }, data });
+
+  // One event per change, with the before and after, so the timeline explains
+  // why the amount owed moved.
+  if (changingMoney) {
+    const parts: string[] = [];
+    if (parsed.data.discount !== undefined && parsed.data.discount !== existing.discount) {
+      parts.push(`discount ${existing.discount} → ${parsed.data.discount} BDT`);
+    }
+    if (parsed.data.shippingFee !== undefined && parsed.data.shippingFee !== existing.shippingFee) {
+      parts.push(`courier charge ${existing.shippingFee} → ${parsed.data.shippingFee} BDT`);
+    }
+    if (parts.length > 0) {
+      await logOrderEvent(
+        order.id,
+        "NOTE",
+        `Order total updated by admin: ${parts.join(", ")}. Total ${existing.total} → ${order.total} BDT.`,
+        admin.name
+      );
+    }
+  }
 
   // Stock moves whenever a status crosses into or out of a "goods physically
   // came back" state (cancelled or returned) — see STOCK_RESTORE_STATUSES's
