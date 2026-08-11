@@ -90,16 +90,24 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
                 src={images[0]}
                 alt={product.name}
                 fill
-                className={`object-cover group-hover:scale-[1.07] ${outOfStock ? "grayscale opacity-60" : ""}`}
+                // Sold out used to stack full greyscale, 60% opacity AND a
+                // cream veil with a blur on top — three dimming effects on one
+                // photo, which left the product barely identifiable. A shopper
+                // who can't tell what it is can't decide to come back for it.
+                // A light desaturation is enough to read as unavailable in a
+                // grid; the badge and the disabled button carry the message.
+                className={`object-cover group-hover:scale-[1.07] ${outOfStock ? "grayscale-[0.35]" : ""}`}
                 sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
               />
             )}
 
-            {/* Sold-out veil — the card stays browsable (it still links through to the
-                product page) but reads unmistakably as unavailable at a glance. */}
+            {/* The badge carries the message rather than a veil over the whole
+                photo. Its own near-opaque pill is what makes it legible, on a
+                pale product shot as easily as a dark one, so nothing needs to
+                be laid over the product itself. */}
             {outOfStock && (
-              <div className="absolute inset-0 flex items-center justify-center bg-cream/50 backdrop-blur-[1px]">
-                <span className="rounded-full bg-ink/85 px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-cream">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <span className="rounded-full bg-ink/90 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-cream shadow-e2">
                   Sold Out
                 </span>
               </div>

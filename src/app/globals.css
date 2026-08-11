@@ -74,7 +74,12 @@ body {
          active:translate-y-0 active:scale-[0.98] active:shadow-e2
          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-gold focus-visible:ring-offset-2
          disabled:translate-y-0 disabled:cursor-not-allowed disabled:from-ink/25 disabled:via-ink/25
-         disabled:to-ink/25 disabled:text-white/80 disabled:shadow-none;
+         /* Dark text, not white: white/80 on this pale grey fill measured
+            1.57:1, so "Currently out of stock" — the one thing a shopper
+            looking at a sold-out product needs to read — was barely there.
+            ink/80 on the same fill is 5.13:1, and the flat grey still reads
+            as a control you can't press. */
+         disabled:to-ink/25 disabled:text-ink/80 disabled:shadow-none;
 }
 
 /* Buy Now, the express path. Filled so it reads as a real action rather than a

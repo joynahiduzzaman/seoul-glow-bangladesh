@@ -167,8 +167,16 @@ export default function QuickViewModal({
               alt={product.name}
               fill
               sizes="(max-width: 640px) 100vw, 176px"
-              className={`object-cover ${outOfStock ? "grayscale opacity-60" : ""}`}
+              // Matches the card: a light desaturation, not the old greyscale
+              // plus 40% dim, which made the product hard to make out in the
+              // one view whose whole job is showing it up close.
+              className={`object-cover ${outOfStock ? "grayscale-[0.35]" : ""}`}
             />
+            {outOfStock && (
+              <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-ink/85 py-1.5 text-center text-[10px] font-bold uppercase tracking-[0.14em] text-cream">
+                Sold Out
+              </span>
+            )}
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col p-5">
