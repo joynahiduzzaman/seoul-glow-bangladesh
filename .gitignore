@@ -45,3 +45,8 @@ public/uploads/products/*
 
 # TypeScript incremental build cache — a build artifact, not source.
 tsconfig.tsbuildinfo
+
+# Scratch files from local testing
+.devlog.txt
+.e2e-*.mjs
+.shot-*
