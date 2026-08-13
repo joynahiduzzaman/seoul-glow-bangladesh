@@ -69,8 +69,8 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
         </div>
       ) : (
         <div className="space-y-6">
-          <section className="rounded-xl2 bg-white p-5 shadow-soft">
-            <div className="mb-4 flex items-baseline justify-between gap-3">
+          <section className="min-w-0 rounded-xl2 bg-white p-5 shadow-soft">
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <h2 className="font-display text-lg font-semibold">Sales by day</h2>
               <span className="text-xs text-ink/50">
                 {report.byDay.length} day{report.byDay.length === 1 ? "" : "s"} with orders
@@ -84,7 +84,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
             <ReportTable title="Product sales" labelHeader="Product" rows={report.products} limit={ON_SCREEN_ROWS} />
             <ReportTable title="Category sales" labelHeader="Category" rows={report.categories} limit={ON_SCREEN_ROWS} />
             <ReportTable title="Brand sales" labelHeader="Brand" rows={report.brands} limit={ON_SCREEN_ROWS} />
-            <div className="grid gap-6">
+            <div className="grid min-w-0 gap-6">
               <ReportTable title="Payment methods" labelHeader="Method" rows={report.payments} showUnits={false} />
               <ReportTable title="Order sources" labelHeader="Source" rows={report.sources} showUnits={false} />
             </div>

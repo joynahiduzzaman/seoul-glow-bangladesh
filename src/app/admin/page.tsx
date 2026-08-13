@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/server/db";
 import { formatBDT } from "@/lib/utils";
 import StatCard from "@/components/admin/StatCard";
+import NeedsAction from "@/components/admin/NeedsAction";
 import SimpleBarChart from "@/components/admin/SimpleBarChart";
 import { getRevenueSummary, getDailyRevenue, getBestSellers } from "@/server/revenue";
 import {
@@ -51,6 +52,9 @@ export default async function AdminDashboard() {
     expiredCount,
     expiringSoonCount,
     expiringSoonProducts,
+    needsFulfillment,
+    awaitingCourier,
+    unpaidDelivered,
   ] = await Promise.all([
     prisma.order.count({ where: { createdAt: { gte: todayStart } } }),
     prisma.order.count({ where: { status: "PENDING" } }),
@@ -71,6 +75,16 @@ export default async function AdminDashboard() {
       take: 6,
       orderBy: { expiryDate: "asc" },
     }),
+    // --- Needs Action -----------------------------------------------------
+    // Confirmed and packed orders are the fulfilment queue: paid for, agreed,
+    // and sitting in the shop waiting to be picked and boxed.
+    prisma.order.count({ where: { status: { in: ["CONFIRMED", "PACKED"] } } }),
+    // Ready to go but with no courier assigned — the step that quietly stalls,
+    // because nothing about the order looks wrong until someone asks where it is.
+    prisma.order.count({ where: { status: { in: ["CONFIRMED", "PACKED"] }, shipment: { is: null } } }),
+    // Delivered but never marked paid. On cash on delivery that is money the
+    // courier is holding, or money nobody chased.
+    prisma.order.count({ where: { status: "DELIVERED", paymentStatus: { in: ["PENDING", "PARTIAL"] } } }),
   ]);
 
   // Revenue, the chart and best sellers all read the same rule from
@@ -102,8 +116,51 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard icon={Wallet} label="Total Revenue" value={formatBDT(totalRevenue)} tone="success" hint="Delivered orders, all time" />
         <StatCard icon={TrendingUp} label="Monthly Revenue" value={formatBDT(monthlyRevenue)} tone="info" hint="Delivered this calendar month" />
-        <StatCard icon={CalendarCheck} label="Today's Orders" value={todaysOrders} tone="violet" hint="Placed since midnight" />
+        {/* Clickable: the number was already the interesting part, and the
+            orders list now takes a date range, so it can land on exactly the
+            orders it counts. */}
+        <StatCard
+          icon={CalendarCheck}
+          label="Today's Orders"
+          value={todaysOrders}
+          tone="violet"
+          hint="Placed since midnight"
+          href={`/admin/orders?from=${todayStart.toISOString().slice(0, 10)}&to=${todayStart.toISOString().slice(0, 10)}`}
+        />
       </div>
+
+      <NeedsAction
+        items={[
+          {
+            label: "to fulfil",
+            count: needsFulfillment,
+            href: "/admin/orders?status=CONFIRMED",
+            hint: "Confirmed or packed, waiting to be picked and boxed",
+            icon: "fulfil",
+          },
+          {
+            label: "awaiting a courier",
+            count: awaitingCourier,
+            href: "/admin/orders?courier=NONE",
+            hint: "Ready to ship with no courier assigned yet",
+            icon: "courier",
+          },
+          {
+            label: "payments outstanding",
+            count: unpaidDelivered,
+            href: "/admin/orders?status=DELIVERED&payment=PENDING",
+            hint: "Delivered but not marked paid — cash still to collect",
+            icon: "payment",
+          },
+          {
+            label: "products low or out",
+            count: lowStockCount + outOfStockCount,
+            href: "/admin/inventory?filter=low",
+            hint: "Fewer than 10 left, or nothing at all",
+            icon: "stock",
+          },
+        ]}
+      />
 
       {/* Order status breakdown */}
       <section>
