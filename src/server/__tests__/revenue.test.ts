@@ -130,14 +130,33 @@ describe("no page computes revenue independently", () => {
  * which is what these assert.
  */
 describe("affiliate commissions follow the order's fate", () => {
+  // Status changes moved into a shared service when bulk actions arrived, so
+  // that the single-order route and the bulk endpoint cannot drift apart on
+  // stock, commissions, the timeline or the customer notification. The
+  // guarantee is unchanged; it just lives one file over now.
+  const service = readFileSync(path.resolve(process.cwd(), "src/server/order-status-change.ts"), "utf8");
   const handler = readFileSync(
     path.resolve(process.cwd(), "src/app/api/admin/orders/[id]/route.ts"),
     "utf8"
   );
+  const bulk = readFileSync(path.resolve(process.cwd(), "src/app/api/admin/orders/bulk/route.ts"), "utf8");
   const commissions = readFileSync(path.resolve(process.cwd(), "src/server/commissions.ts"), "utf8");
 
   it("syncs commissions whenever an order's status changes", () => {
-    expect(handler).toMatch(/syncCommissionsForOrderStatus\(/);
+    expect(service).toMatch(/syncCommissionsForOrderStatus\(/);
+  });
+
+  it("both the single and the bulk route change status through that one service", () => {
+    // A second implementation is how inventory gets double-counted.
+    expect(handler).toMatch(/applyOrderStatusChange\(/);
+    expect(bulk).toMatch(/applyOrderStatusChange\(/);
+    expect(bulk).not.toMatch(/order\.updateMany\(\{[^}]*status:/);
+  });
+
+  it("the service moves stock and notifies on the same transition", () => {
+    expect(service).toMatch(/adjustStock\(/);
+    expect(service).toMatch(/notifyOrderStatusChange\(/);
+    expect(service).toMatch(/logOrderEvent\(/);
   });
 
   it("voids on cancellation and reinstates on reactivation", () => {

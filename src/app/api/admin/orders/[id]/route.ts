@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db";
 import { getCurrentUser } from "@/server/auth";
-import { notifyOrderStatusChange } from "@/server/order-notifications";
-import { adjustStock } from "@/server/inventory";
 import { logOrderEvent } from "@/server/order-events";
+import { applyOrderStatusChange } from "@/server/order-status-change";
 import { ORDER_STATUSES, PAYMENT_STATUSES, STOCK_RESTORE_STATUSES, canTransitionStatus, validNextStatuses } from "@/lib/order-status";
 import { z } from "zod";
-import { syncCommissionsForOrderStatus } from "@/server/commissions";
 
 const schema = z.object({
   status: z.enum(ORDER_STATUSES).optional(),
@@ -84,8 +82,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     );
   }
 
+  // The status leg is delegated to the shared service so this route and the
+  // bulk endpoint move an order the same way — same stock, commission,
+  // timeline and notification handling, written once.
+  let statusResult: Awaited<ReturnType<typeof applyOrderStatusChange>> | null = null;
+  if (parsed.data.status !== undefined && parsed.data.status !== existing.status) {
+    statusResult = await applyOrderStatusChange(params.id, parsed.data.status, admin);
+    if (!statusResult.ok) {
+      return NextResponse.json({ error: statusResult.reason || "Could not change the status" }, { status: 400 });
+    }
+  }
+
   const data: any = {};
-  if (parsed.data.status !== undefined) data.status = parsed.data.status;
   if (parsed.data.paymentStatus !== undefined) data.paymentStatus = parsed.data.paymentStatus;
   if (parsed.data.assignedStaffId !== undefined) data.assignedStaffId = parsed.data.assignedStaffId || null;
 
@@ -138,26 +146,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
   }
 
-  // Stock moves whenever a status crosses into or out of a "goods physically
-  // came back" state (cancelled or returned) — see STOCK_RESTORE_STATUSES's
-  // doc comment in src/lib/order-status.ts for why REFUNDED isn't in that set.
-  if (parsed.data.status && parsed.data.status !== existing.status) {
-    const wasRestored = STOCK_RESTORE_STATUSES.includes(existing.status as any);
-    const nowRestored = STOCK_RESTORE_STATUSES.includes(parsed.data.status as any);
-    if (!wasRestored && nowRestored) {
-      for (const item of existing.items) {
-        await adjustStock(item.productId, item.quantity, `Order ${order.orderNumber} ${parsed.data.status.toLowerCase()} — stock restored`, admin.name);
-      }
-    } else if (wasRestored && !nowRestored) {
-      for (const item of existing.items) {
-        await adjustStock(item.productId, -item.quantity, `Order ${order.orderNumber} reactivated — stock re-reserved`, admin.name);
-      }
-    }
-    // Affiliate commissions follow the same transition as stock: a cancelled
-    // order must not leave a live payout obligation behind.
-    await syncCommissionsForOrderStatus(order.id, existing.status, parsed.data.status, admin.name);
-    await logOrderEvent(order.id, "STATUS_CHANGE", `Status changed from ${existing.status} to ${parsed.data.status}`, admin.name);
-  }
+  // Stock, commissions, the timeline entry and the customer notification for a
+  // status change all happened inside applyOrderStatusChange above.
 
   if (parsed.data.paymentStatus && parsed.data.paymentStatus !== existing.paymentStatus) {
     await logOrderEvent(order.id, "PAYMENT_CHANGE", `Payment status changed from ${existing.paymentStatus} to ${parsed.data.paymentStatus}`, admin.name);
@@ -172,16 +162,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
   }
 
-  // Notification trigger — in-app for logged-in customers, plus email (and an
-  // SMS-ready stub) for guest AND registered customers alike, since a guest
-  // with no account still deserves to know their order shipped.
-  if (parsed.data.status && parsed.data.status !== existing.status) {
-    const shipment = await prisma.shipment.findUnique({
-      where: { orderId: order.id },
-      select: { courier: true, customCourierName: true, trackingNumber: true },
-    });
-    await notifyOrderStatusChange(order, parsed.data.status, shipment);
-  }
+  // The customer notification is sent by applyOrderStatusChange, which owns
+  // the whole status transition.
 
   return NextResponse.json({ order });
 }
