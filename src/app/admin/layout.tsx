@@ -24,6 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Brands", href: "/admin/brands", icon: "brands" as const },
     { label: "Inventory", href: "/admin/inventory", icon: "inventory" as const, badge: lowStockCount > 0 ? lowStockCount : undefined },
     { label: "Orders", href: "/admin/orders", icon: "orders" as const, badge: pendingOrders > 0 ? pendingOrders : undefined },
+    { label: "Reports", href: "/admin/reports", icon: "reports" as const },
     { label: "Coupons", href: "/admin/coupons", icon: "coupons" as const },
     { label: "Affiliates", href: "/admin/affiliates", icon: "affiliates" as const },
     { label: "Support Tickets", href: "/admin/support-tickets", icon: "support" as const, badge: openTickets > 0 ? openTickets : undefined },

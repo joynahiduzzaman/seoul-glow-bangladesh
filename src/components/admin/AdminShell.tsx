@@ -10,7 +10,7 @@ import AdminUserMenu from "./AdminUserMenu";
 interface NavItem {
   label: string;
   href: string;
-  icon: "dashboard" | "products" | "orders" | "coupons" | "affiliates" | "support" | "inventory" | "homepage" | "content" | "categories" | "brands";
+  icon: "dashboard" | "products" | "orders" | "coupons" | "affiliates" | "support" | "inventory" | "homepage" | "content" | "categories" | "brands" | "reports";
   badge?: number;
 }
 

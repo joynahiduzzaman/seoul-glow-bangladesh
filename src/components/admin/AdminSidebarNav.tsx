@@ -13,6 +13,7 @@ import {
   LayoutTemplate,
   FileText,
   FolderTree,
+  BarChart3,
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import {
 // to a "use client" component, so it hands us string keys instead.
 const ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
+  reports: BarChart3,
   products: Package,
   orders: ShoppingCart,
   coupons: Tag,
