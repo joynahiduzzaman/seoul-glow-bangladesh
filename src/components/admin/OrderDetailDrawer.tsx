@@ -9,7 +9,7 @@ import {
   ShoppingBag, RefreshCw, Loader2, Send, CheckCircle2, Radio, Wallet, XCircle, Trash2,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
-import { PAYMENT_STATUSES, validNextStatuses } from "@/lib/order-status";
+import { PAYMENT_STATUSES, forwardPathBetween, reachableStatuses } from "@/lib/order-status";
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, MOBILE_BANKING_METHODS } from "@/lib/payment";
 import { COURIERS, COURIER_LABELS, DELIVERY_STATUSES, DELIVERY_STATUS_LABELS, CourierValue } from "@/lib/shipping";
 import { OrderStatusBadge, PaymentStatusBadge, VerificationStatusBadge, DeliveryStatusBadge } from "./OrderBadges";
@@ -105,6 +105,11 @@ function timeAgo(iso: string): string {
   const days = Math.round(hours / 24);
   if (days < 30) return `${days}d ago`;
   return new Date(iso).toLocaleDateString("en-BD", { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** "CONFIRMED" -> "Confirmed", "OUT_FOR_DELIVERY" -> "Out for delivery". */
+function title(s: string): string {
+  return s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, " ");
 }
 
 function todayInputDate(): string {
@@ -557,17 +562,40 @@ export default function OrderDetailDrawer({
                     {order.status === "DRAFT" ? (
                       <p className="text-sm text-ink/70 py-2">Use "Confirm Order" above</p>
                     ) : (
-                      <select
-                        value={order.status}
-                        disabled={savingField === "status"}
-                        onChange={(e) => patchOrder("status", { status: e.target.value }, "Order status updated")}
-                        className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm"
-                      >
-                        <option value={order.status}>{order.status.charAt(0) + order.status.slice(1).toLowerCase()} (current)</option>
-                        {validNextStatuses(order.status).map((s) => (
-                          <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</option>
-                        ))}
-                      </select>
+                      <>
+                        <select
+                          value={order.status}
+                          disabled={savingField === "status"}
+                          onChange={(e) => {
+                            const to = e.target.value;
+                            const crossed = forwardPathBetween(order.status, to);
+                            const note =
+                              crossed.length > 1
+                                ? `Moved through ${crossed.map((s) => s.toLowerCase()).join(" → ")}`
+                                : "Order status updated";
+                            patchOrder("status", { status: to }, note);
+                          }}
+                          className="w-full rounded-lg border border-ink/10 px-3 py-2 text-sm"
+                        >
+                          <option value={order.status}>{title(order.status)} (current)</option>
+                          {/* Every status further along the line, not just the
+                              next one: an order packed and handed to the courier
+                              in one go shouldn't need three saves to record. */}
+                          {reachableStatuses(order.status).map((s) => {
+                            const steps = forwardPathBetween(order.status, s);
+                            return (
+                              <option key={s} value={s}>
+                                {title(s)}
+                                {steps.length > 1 ? ` — via ${steps.slice(0, -1).map(title).join(", ")}` : ""}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <p className="mt-1.5 text-[11px] leading-snug text-ink/50">
+                          Jumping ahead records each step in between. The customer is notified once, about where it
+                          ends up.
+                        </p>
+                      </>
                     )}
                   </div>
                   <div>

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db";
 import { getCurrentUser } from "@/server/auth";
 import { logOrderEvent } from "@/server/order-events";
-import { applyOrderStatusChange } from "@/server/order-status-change";
-import { ORDER_STATUSES, PAYMENT_STATUSES, STOCK_RESTORE_STATUSES, canTransitionStatus, validNextStatuses } from "@/lib/order-status";
+import { applyOrderStatusPath } from "@/server/order-status-change";
+import { ORDER_STATUSES, PAYMENT_STATUSES, validNextStatuses } from "@/lib/order-status";
 import { z } from "zod";
 
 const schema = z.object({
@@ -69,25 +69,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const existing = await prisma.order.findUnique({ where: { id: params.id }, include: { items: true } });
   if (!existing) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-  // Reject a status change that skips steps or moves backward outside the
-  // allowed graph — e.g. PENDING straight to SHIPPED, or DELIVERED back to
-  // PENDING. DRAFT orders are never touched by this route at all (they only
-  // move via POST .../confirm), but the check still applies defensively.
-  if (parsed.data.status && !canTransitionStatus(existing.status, parsed.data.status)) {
-    const next = validNextStatuses(existing.status);
-    const options = next.length > 0 ? next.join(", ") : "none — this is a final status";
-    return NextResponse.json(
-      { error: `Cannot change status from ${existing.status} to ${parsed.data.status}. Valid next step(s): ${options}.` },
-      { status: 400 }
-    );
-  }
-
   // The status leg is delegated to the shared service so this route and the
   // bulk endpoint move an order the same way — same stock, commission,
-  // timeline and notification handling, written once.
-  let statusResult: Awaited<ReturnType<typeof applyOrderStatusChange>> | null = null;
+  // timeline and notification handling, written once. It validates the
+  // transition itself and reports why it refused, so there is no separate
+  // guard here to fall out of step with it.
+  let statusResult: Awaited<ReturnType<typeof applyOrderStatusPath>> | null = null;
   if (parsed.data.status !== undefined && parsed.data.status !== existing.status) {
-    statusResult = await applyOrderStatusChange(params.id, parsed.data.status, admin);
+    // The path version, not the single step: picking Shipped from Confirmed
+    // crosses Packed on the way, applying each transition properly rather than
+    // refusing the jump.
+    statusResult = await applyOrderStatusPath(params.id, parsed.data.status, admin);
     if (!statusResult.ok) {
       return NextResponse.json({ error: statusResult.reason || "Could not change the status" }, { status: 400 });
     }

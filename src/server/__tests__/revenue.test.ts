@@ -147,9 +147,12 @@ describe("affiliate commissions follow the order's fate", () => {
   });
 
   it("both the single and the bulk route change status through that one service", () => {
-    // A second implementation is how inventory gets double-counted.
-    expect(handler).toMatch(/applyOrderStatusChange\(/);
-    expect(bulk).toMatch(/applyOrderStatusChange\(/);
+    // A second implementation is how inventory gets double-counted. Both routes
+    // enter through applyOrderStatusPath, which walks the pipeline one step at
+    // a time via applyOrderStatusChange — still the one shared service.
+    expect(handler).toMatch(/applyOrderStatusPath\(/);
+    expect(bulk).toMatch(/applyOrderStatus(Path|Change)\(/);
+    expect(service).toMatch(/applyOrderStatusChange\(orderId, chain\[i\]/);
     expect(bulk).not.toMatch(/order\.updateMany\(\{[^}]*status:/);
   });
 

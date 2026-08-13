@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db";
 import { getCurrentUser } from "@/server/auth";
 import { logOrderEvent } from "@/server/order-events";
-import { applyOrderStatusChange, nextForwardStatus, type StatusChangeResult } from "@/server/order-status-change";
+import { applyOrderStatusChange, applyOrderStatusPath, nextForwardStatus, type StatusChangeResult } from "@/server/order-status-change";
 import { ORDER_STATUSES } from "@/lib/order-status";
 import { COURIERS, COURIER_LABELS } from "@/lib/shipping";
 import { z } from "zod";
@@ -75,7 +75,9 @@ export async function POST(req: NextRequest) {
       }
     } else {
       for (const id of ids) {
-        results.push(await applyOrderStatusChange(id, status!, admin));
+        // Path, not step: "set these twelve to Shipped" should work on an order
+        // still at Confirmed, exactly as it does for a single order.
+        results.push(await applyOrderStatusPath(id, status!, admin));
       }
     }
 

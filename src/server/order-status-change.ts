@@ -3,7 +3,17 @@ import { adjustStock } from "@/server/inventory";
 import { logOrderEvent } from "@/server/order-events";
 import { notifyOrderStatusChange } from "@/server/order-notifications";
 import { syncCommissionsForOrderStatus } from "@/server/commissions";
-import { STOCK_RESTORE_STATUSES, canTransitionStatus, validNextStatuses, type OrderStatus } from "@/lib/order-status";
+import {
+  STOCK_RESTORE_STATUSES,
+  canTransitionStatus,
+  validNextStatuses,
+  nextForwardStatus,
+  forwardPathBetween,
+  type OrderStatus,
+} from "@/lib/order-status";
+
+// Re-exported so existing callers keep one import site for status movement.
+export { nextForwardStatus, forwardPathBetween, reachableStatuses } from "@/lib/order-status";
 
 /**
  * The one place an order's status changes.
@@ -41,8 +51,13 @@ export interface StatusChangeResult {
 export async function applyOrderStatusChange(
   orderId: string,
   toStatus: string,
-  admin: { name: string }
+  admin: { name: string },
+  /** Suppress the customer notification for this one step. Used when walking a
+   *  multi-step path, so a jump from confirmed to shipped sends one message
+   *  about shipping rather than one per status crossed. */
+  options: { notify?: boolean } = {}
 ): Promise<StatusChangeResult> {
+  const notify = options.notify !== false;
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
     include: { items: true },
@@ -114,38 +129,87 @@ export async function applyOrderStatusChange(
   await syncCommissionsForOrderStatus(orderId, existing.status, toStatus, admin.name);
   await logOrderEvent(orderId, "STATUS_CHANGE", `Status changed from ${existing.status} to ${toStatus}`, admin.name);
 
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (order) {
-    const shipment = await prisma.shipment.findUnique({
-      where: { orderId },
-      select: { courier: true, customCourierName: true, trackingNumber: true },
-    });
-    // Cast: toStatus was validated against the transition table above, so by
-    // here it is a real OrderStatus even though it arrived as a string.
-    await notifyOrderStatusChange(order, toStatus as OrderStatus, shipment);
+  if (notify) {
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (order) {
+      const shipment = await prisma.shipment.findUnique({
+        where: { orderId },
+        select: { courier: true, customCourierName: true, trackingNumber: true },
+      });
+      // Cast: toStatus was validated against the transition table above, so by
+      // here it is a real OrderStatus even though it arrived as a string.
+      await notifyOrderStatusChange(order, toStatus as OrderStatus, shipment);
+    }
   }
 
   return { ...base, ok: true };
 }
 
 /**
- * The status an order should advance to when an admin says "move it along".
+ * Move an order to any status further along the pipeline, crossing whatever
+ * sits between.
  *
- * Deliberately the *forward* step only: every status's transition list also
- * contains CANCELLED or RETURNED, and a bulk "next status" that cancelled a
- * batch of orders because cancel happened to be listed first would be a
- * catastrophe. Anything with no forward step returns null and is skipped.
+ * Fulfilment doesn't happen a step at a time. A parcel that was confirmed this
+ * morning gets packed and handed to the courier in one go, and making an admin
+ * pick Packed, save, then pick Shipped, save, is three round-trips to record
+ * one real-world event — with a customer email fired at each one.
+ *
+ * Every intermediate status is still genuinely applied: each gets its own
+ * timeline entry and its own stock and commission handling, because skipping
+ * them would leave an order that was never packed and an audit trail that
+ * can't explain itself. Only the customer notification is held back until the
+ * end, so the shopper hears "your order has shipped" once rather than three
+ * messages in the same second.
+ *
+ * Backward and sideways moves (cancel, return, refund) are single steps by
+ * definition and fall through to the one-step path.
  */
-const FORWARD_STEP: Record<string, string> = {
-  // DRAFT is absent on purpose: confirming a draft has to reserve stock, which
-  // only the confirm route does. A bulk "next status" over drafts would create
-  // live orders holding inventory nobody reserved.
-  PENDING: "CONFIRMED",
-  CONFIRMED: "PACKED",
-  PACKED: "SHIPPED",
-  SHIPPED: "DELIVERED",
-};
-
-export function nextForwardStatus(from: string): string | null {
-  return FORWARD_STEP[from] ?? null;
+export interface StatusPathResult extends StatusChangeResult {
+  /** Every status crossed, in order, including the destination. */
+  path: string[];
 }
+
+export async function applyOrderStatusPath(
+  orderId: string,
+  toStatus: string,
+  admin: { name: string }
+): Promise<StatusPathResult> {
+  const existing = await prisma.order.findUnique({ where: { id: orderId }, select: { status: true, orderNumber: true } });
+  if (!existing) {
+    return { ok: false, orderId, orderNumber: "", from: "", to: toStatus, reason: "Order not found", path: [] };
+  }
+
+  const chain = forwardPathBetween(existing.status, toStatus);
+
+  // Not a forward jump — a single legal transition, or an illegal one that the
+  // single-step function will refuse with a proper explanation.
+  if (chain.length <= 1) {
+    const result = await applyOrderStatusChange(orderId, toStatus, admin);
+    return { ...result, path: result.ok ? [toStatus] : [] };
+  }
+
+  const done: string[] = [];
+  for (let i = 0; i < chain.length; i++) {
+    const isLast = i === chain.length - 1;
+    const step = await applyOrderStatusChange(orderId, chain[i], admin, { notify: isLast });
+    if (!step.ok) {
+      // Stop where it broke rather than pressing on. The steps already applied
+      // stand — they really happened — and the caller is told how far it got.
+      return {
+        ...step,
+        from: existing.status,
+        to: toStatus,
+        path: done,
+        reason: done.length
+          ? `Moved as far as ${done[done.length - 1].toLowerCase()}, then stopped: ${step.reason}`
+          : step.reason,
+      };
+    }
+    done.push(chain[i]);
+  }
+
+  return { ok: true, orderId, orderNumber: existing.orderNumber, from: existing.status, to: toStatus, path: done };
+}
+
+
+

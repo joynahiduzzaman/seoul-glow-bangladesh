@@ -105,3 +105,64 @@ export const STATUS_CUSTOMER_MESSAGES: Partial<Record<OrderStatus, string>> = {
   RETURNED: "has been marked as returned",
   REFUNDED: "has been refunded",
 };
+
+/**
+ * The forward pipeline: the status an order advances to when it moves along.
+ *
+ * Deliberately not derived from STATUS_TRANSITIONS. Every status there also
+ * lists CANCELLED or RETURNED as legal, so anything that picked "the next
+ * available transition" could cancel an order while trying to advance it.
+ *
+ * DRAFT is absent: confirming a draft reserves stock, which only the confirm
+ * route does, so a draft must never be advanced by a status change.
+ *
+ * These live here rather than beside the server-side transition code because
+ * the admin's status dropdown needs them too, and that runs in the browser —
+ * importing the server module would drag Prisma into the client bundle.
+ */
+const FORWARD_STEP: Partial<Record<OrderStatus, OrderStatus>> = {
+  PENDING: "CONFIRMED",
+  CONFIRMED: "PACKED",
+  PACKED: "SHIPPED",
+  SHIPPED: "DELIVERED",
+};
+
+export function nextForwardStatus(from: string): OrderStatus | null {
+  return FORWARD_STEP[from as OrderStatus] ?? null;
+}
+
+/**
+ * The statuses to cross, in order, to get from one status to another going
+ * forward — empty if `to` isn't ahead of `from` on the line.
+ *
+ * Walking FORWARD_STEP rather than searching the transition graph means the
+ * result can only ever be pipeline order, and can never route through a
+ * terminal status.
+ */
+export function forwardPathBetween(from: string, to: string): OrderStatus[] {
+  if (from === to) return [];
+  const path: OrderStatus[] = [];
+  let cur: OrderStatus | null = from as OrderStatus;
+  // Bounded by the pipeline's length; the cap is belt and braces against a
+  // future cycle in the table.
+  for (let i = 0; i < 10 && cur; i++) {
+    cur = nextForwardStatus(cur);
+    if (!cur) break;
+    path.push(cur);
+    if (cur === to) return path;
+  }
+  return [];
+}
+
+/** Everywhere an admin can send an order from here: the whole forward
+ *  pipeline, plus the terminal actions the transition table allows. */
+export function reachableStatuses(from: string): OrderStatus[] {
+  const forward: OrderStatus[] = [];
+  let cur: OrderStatus | null = from as OrderStatus;
+  for (let i = 0; i < 10 && cur; i++) {
+    cur = nextForwardStatus(cur);
+    if (!cur) break;
+    forward.push(cur);
+  }
+  return Array.from(new Set([...forward, ...validNextStatuses(from)]));
+}
