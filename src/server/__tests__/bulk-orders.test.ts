@@ -99,3 +99,21 @@ describe("the status service guards against double-application", () => {
     expect(service).toMatch(/existing\.status === "DRAFT"/);
   });
 });
+
+describe("the print routes are behind the admin guard", () => {
+  const middleware = read("src/middleware.ts");
+
+  it("covers /admin-print and /admin-preview-frame, not just /admin", () => {
+    // `/admin/:path*` matches children of /admin only. /admin-print is a
+    // sibling segment, so middleware never ran for it, and an invoice — a
+    // customer's name, phone, address and order contents — was readable by
+    // anyone holding the order id, with no session.
+    expect(middleware).toMatch(/"\/admin-print\/:path\*"/);
+    expect(middleware).toMatch(/"\/admin-preview-frame\/:path\*"/);
+    expect(middleware).toMatch(/"\/admin\/:path\*"/);
+  });
+
+  it("still checks the same three roles it always did", () => {
+    expect(middleware).toMatch(/\["ADMIN", "MANAGER", "STAFF"\]/);
+  });
+});

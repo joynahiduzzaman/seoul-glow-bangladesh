@@ -8,6 +8,8 @@ import StatCard from "@/components/admin/StatCard";
 import SortSelect from "@/components/admin/SortSelect";
 import OrdersTableClient from "@/components/admin/OrdersTableClient";
 import { revenueWhere, pipelineWhere } from "@/server/revenue";
+import { parseOrderFilters, orderWhere, buildOrderQuery } from "@/server/order-filters";
+import OrderFilterBar from "@/components/admin/OrderFilterBar";
 
 export const dynamic = "force-dynamic";
 
@@ -33,28 +35,26 @@ function startOfDay(d: Date) {
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; payment?: string; sort?: string; page?: string };
+  searchParams: {
+    q?: string;
+    status?: string;
+    payment?: string;
+    courier?: string;
+    source?: string;
+    from?: string;
+    to?: string;
+    sort?: string;
+    page?: string;
+  };
 }) {
-  const q = searchParams.q?.trim() || "";
-  const activeStatus = searchParams.status && STATUS_TABS.includes(searchParams.status as any) ? searchParams.status : "";
-  const activePayment = searchParams.payment && PAYMENT_FILTERS.some((p) => p.value === searchParams.payment) ? searchParams.payment : "";
+  // Parsed and turned into a Prisma filter by the shared module the reports
+  // page also uses, so the two can never disagree about what a filter means.
+  const filters = parseOrderFilters(searchParams);
+  const activeStatus = filters.status;
+  const q = filters.q;
   const sort = searchParams.sort && SORTS[searchParams.sort] ? searchParams.sort : "newest";
   const page = Math.max(1, Number(searchParams.page) || 1);
-
-  const where: any = {};
-  if (activeStatus) where.status = activeStatus;
-  if (activePayment) where.paymentStatus = activePayment;
-  if (q) {
-    where.OR = [
-      { orderNumber: { contains: q, mode: "insensitive" } },
-      { shippingName: { contains: q, mode: "insensitive" } },
-      { shippingPhone: { contains: q, mode: "insensitive" } },
-      { guestEmail: { contains: q, mode: "insensitive" } },
-      { guestName: { contains: q, mode: "insensitive" } },
-      { user: { email: { contains: q, mode: "insensitive" } } },
-      { user: { name: { contains: q, mode: "insensitive" } } },
-    ];
-  }
+  const where = orderWhere(filters);
 
   const todayStart = startOfDay(new Date());
 
@@ -78,8 +78,12 @@ export default async function AdminOrdersPage({
       take: PAGE_SIZE,
     }),
     prisma.order.count({ where }),
-    Promise.all(STATUS_TABS.map((s) => prisma.order.count({ where: { status: s } }))),
-    prisma.order.count(),
+    // Tab counts respect every other filter. Showing a global "Delivered (412)"
+    // beside a one-week date range invites you to click it and find four.
+    Promise.all(
+      STATUS_TABS.map((s) => prisma.order.count({ where: { ...orderWhere({ ...filters, status: "" }), status: s } }))
+    ),
+    prisma.order.count({ where: orderWhere({ ...filters, status: "" }) }),
     prisma.order.count({ where: { createdAt: { gte: todayStart } } }),
     prisma.order.count({ where: { status: "PENDING" } }),
     prisma.order.count({ where: { status: { in: ["CONFIRMED", "PACKED"] } } }),
@@ -123,12 +127,7 @@ export default async function AdminOrdersPage({
   ];
 
   function buildQuery(overrides: Record<string, string | undefined>) {
-    const params = new URLSearchParams();
-    const merged = { q, status: activeStatus, payment: activePayment, sort, ...overrides };
-    Object.entries(merged).forEach(([k, v]) => {
-      if (v && !(k === "sort" && v === "newest")) params.set(k, v);
-    });
-    return `/admin/orders?${params.toString()}`;
+    return buildOrderQuery({ ...filters, sort }, overrides);
   }
 
   return (
@@ -152,22 +151,19 @@ export default async function AdminOrdersPage({
         ))}
       </div>
 
-      {/* Search */}
-      <form className="relative max-w-sm mb-4">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/30" />
-        <input
-          type="text"
-          name="q"
-          defaultValue={q}
-          placeholder="Search order #, name, phone, or email…"
-          className="w-full rounded-full border border-ink/10 pl-9 pr-4 py-2.5 text-sm"
+      <Suspense fallback={<div className="mb-4 h-[58px] rounded-xl2 border border-border-soft bg-white" />}>
+        <OrderFilterBar
+          q={filters.q}
+          payment={filters.payment}
+          courier={filters.courier}
+          source={filters.source}
+          from={filters.from}
+          to={filters.to}
+          active={filters.active}
         />
-        {activeStatus && <input type="hidden" name="status" value={activeStatus} />}
-        {activePayment && <input type="hidden" name="payment" value={activePayment} />}
-        {sort !== "newest" && <input type="hidden" name="sort" value={sort} />}
-      </form>
+      </Suspense>
 
-      {/* Status filter tabs + payment filter + sort */}
+      {/* Status filter tabs + sort */}
       <div className="flex flex-col lg:flex-row gap-3 mb-6">
         <div className="flex gap-2 flex-wrap">
           <Link
@@ -192,9 +188,8 @@ export default async function AdminOrdersPage({
         </div>
 
         <div className="flex gap-2 lg:ml-auto flex-wrap">
-          <Suspense fallback={<div className="rounded-full border border-ink/10 px-4 py-2.5 text-xs bg-white w-28 h-9" />}>
-            <SortSelect paramName="payment" options={PAYMENT_FILTERS} />
-          </Suspense>
+          {/* Payment moved into the filter bar above, beside the other
+              dropdowns — it was the odd one out over here. */}
           <Suspense fallback={<div className="rounded-full border border-ink/10 px-4 py-2.5 text-xs bg-white w-24 h-9" />}>
             <SortSelect
               options={[

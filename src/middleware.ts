@@ -66,5 +66,13 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/:path*"],
+  // `/admin/:path*` matches /admin and everything under it — but NOT
+  // /admin-print or /admin-preview-frame, which are sibling segments, not
+  // children. The guard inside this file tests `pathname.startsWith("/admin")`
+  // and would have caught them; middleware simply never ran for those paths.
+  //
+  // The effect was that an invoice, packing slip or shipping label — a
+  // customer's name, phone, full delivery address and everything they bought —
+  // was readable by anyone who had the order id, with no session at all.
+  matcher: ["/admin/:path*", "/admin-print/:path*", "/admin-preview-frame/:path*", "/api/:path*"],
 };

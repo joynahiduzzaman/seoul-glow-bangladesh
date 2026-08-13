@@ -1,0 +1,92 @@
+
+> seoul-glow-bangladesh@1.0.0 dev
+> next dev
+
+  ▲ Next.js 14.2.13
+  - Local:        http://localhost:3000
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 22.3s
+ ○ Compiling / ...
+ ✓ Compiled / in 27.1s (1588 modules)
+ GET / 200 in 33584ms
+ ○ Compiling /src/middleware ...
+ ✓ Compiled /src/middleware in 592ms (173 modules)
+ ○ Compiling /api/admin/orders ...
+ ✓ Compiled /api/admin/orders in 1889ms (202 modules)
+ POST /api/admin/orders 400 in 4358ms
+ POST /api/admin/orders 400 in 248ms
+ POST /api/admin/orders 400 in 211ms
+ POST /api/admin/orders 201 in 1329ms
+ POST /api/admin/orders 201 in 859ms
+ POST /api/admin/orders 201 in 949ms
+ ○ Compiling /api/admin/orders/bulk ...
+ ✓ Compiled /api/admin/orders/bulk in 1503ms (208 modules)
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-8045 has been confirmed." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-4402 has been confirmed." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-6638 has been confirmed." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+ POST /api/admin/orders/bulk 200 in 3267ms
+ POST /api/admin/orders/bulk 200 in 336ms
+ POST /api/admin/orders 201 in 1024ms
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-8045 has been packed and is ready to ship." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+ POST /api/admin/orders/bulk 200 in 644ms
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-4402 has been packed and is ready to ship." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-6638 has been packed and is ready to ship." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-7716 has been confirmed." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+ POST /api/admin/orders/bulk 200 in 1687ms
+ POST /api/admin/orders 201 in 867ms
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-5849 has been confirmed." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+ POST /api/admin/orders/bulk 200 in 561ms
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-5849 has been packed and is ready to ship." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+ POST /api/admin/orders/bulk 200 in 548ms
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-5849 has shipped." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+ POST /api/admin/orders/bulk 200 in 548ms
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-5849 has been delivered." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+ POST /api/admin/orders/bulk 200 in 538ms
+ POST /api/admin/orders/bulk 200 in 240ms
+ POST /api/admin/orders 201 in 893ms
+[sms:not-configured] Would SMS "Seoul Glow: Order SGB260813-6135 has been cancelled." to 01700000000. Add SMS_PROVIDER_API_KEY (and provider-specific vars) in .env to send for real.
+ POST /api/admin/orders/bulk 200 in 914ms
+ POST /api/admin/orders/bulk 200 in 233ms
+ POST /api/admin/orders 201 in 540ms
+ POST /api/admin/orders/bulk 200 in 231ms
+ POST /api/admin/orders/bulk 200 in 180ms
+ POST /api/admin/orders 201 in 838ms
+ POST /api/admin/orders/bulk 200 in 510ms
+ POST /api/admin/orders/bulk 200 in 430ms
+ POST /api/admin/orders/bulk 400 in 127ms
+ POST /api/admin/orders/bulk 400 in 133ms
+ POST /api/admin/orders/bulk 400 in 131ms
+ POST /api/admin/orders/bulk 403 in 143ms
+ ○ Compiling /admin/orders ...
+ ✓ Compiled /admin/orders in 5.7s (1822 modules)
+ GET /admin/orders 200 in 7654ms
+ GET /admin/orders?status=CONFIRMED 200 in 1237ms
+ GET /admin/orders?payment=PENDING 200 in 1779ms
+ GET /admin/orders?courier=REDX 200 in 661ms
+ GET /admin/orders?courier=NONE 200 in 747ms
+ GET /admin/orders?source=PHONE 200 in 772ms
+ ○ Compiling /admin-print/orders/batch ...
+ GET /admin/orders?from=2026-01-01&to=2026-12-31 200 in 1189ms
+ GET /admin/orders?q=ZZ+Bulk 200 in 1023ms
+ GET /admin/orders?status=PACKED&courier=NONE&source=PHONE&from=2026-01-01&to=2026-12-31&q=ZZ 200 in 850ms
+ ✓ Compiled /admin-print/orders/batch in 3.1s (1825 modules)
+ GET /admin-print/orders/batch?type=invoice&ids=cmsrq8css0034140z144g2qjl,cmsrq84s50017140zeyvoh4tf 200 in 4433ms
+ GET /admin-print/orders/batch?type=packing-slip&ids=cmsrq8css0034140z144g2qjl,cmsrq84s50017140zeyvoh4tf 200 in 327ms
+ GET /admin-print/orders/batch?type=shipping-label&ids=cmsrq8css0034140z144g2qjl,cmsrq84s50017140zeyvoh4tf 200 in 322ms
+ GET /admin-print/orders/batch?type=invoice&ids=cmsrq8css0034140z144g2qjl 200 in 127ms
+ ○ Compiling /admin-print/orders/[id]/invoice ...
+ ✓ Compiled /admin-print/orders/[id]/invoice in 1281ms (1827 modules)
+ GET /admin-print/orders/cmsoys3po0003btdxo9kwei7x/invoice 200 in 4914ms
+ ○ Compiling /admin-print/orders/[id]/packing-slip ...
+ ✓ Compiled /admin-print/orders/[id]/packing-slip in 1219ms (1829 modules)
+ GET /admin-print/orders/cmsoys3po0003btdxo9kwei7x/packing-slip 200 in 3348ms
+ ○ Compiling /admin-print/orders/[id]/shipping-label ...
+ ✓ Compiled /admin-print/orders/[id]/shipping-label in 1117ms (1831 modules)
+ GET /admin-print/orders/cmsoys3po0003btdxo9kwei7x/shipping-label 200 in 3193ms
+ ○ Compiling /admin-preview-frame ...
+ ✓ Compiled /admin-preview-frame in 4s (1757 modules)
+ GET /admin-preview-frame 200 in 4776ms
+ ✓ Compiled in 2.3s (173 modules)
+ ✓ Compiled /api/admin/orders in 350ms (983 modules)

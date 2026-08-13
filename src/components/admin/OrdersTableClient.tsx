@@ -7,8 +7,8 @@ import { OrderStatusBadge, PaymentStatusBadge } from "./OrderBadges";
 import OrderActionsMenu from "./OrderActionsMenu";
 import OrderDetailDrawer from "./OrderDetailDrawer";
 import { UserCircle2 } from "lucide-react";
-import { useRouter as useNavRouter } from "next/navigation";
 import OrderBulkBar from "./OrderBulkBar";
+import OrderQuickAdvance from "./OrderQuickAdvance";
 
 export interface OrderRow {
   id: string;
@@ -138,7 +138,10 @@ export default function OrdersTableClient({ orders: initialOrders }: { orders: O
                     <PaymentStatusBadge status={o.paymentStatus} method={o.paymentMethod} />
                   </td>
                   <td className="p-4">
-                    <OrderStatusBadge status={o.status} />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <OrderStatusBadge status={o.status} />
+                      <OrderQuickAdvance orderId={o.id} status={o.status} onDone={() => router.refresh()} />
+                    </div>
                   </td>
                   <td className="p-4 text-ink/70">
                     {o.assignedStaff ? (
