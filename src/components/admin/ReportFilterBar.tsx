@@ -54,7 +54,9 @@ export default function ReportFilterBar({
   };
   const printHref = () => {
     const qs = searchParams.toString();
-    return qs ? `/admin/reports/print?${qs}` : "/admin/reports/print";
+    // /admin-print, not /admin: everything under /admin is wrapped in the admin
+    // shell, and the sidebar printed into the PDF.
+    return qs ? `/admin-print/reports?${qs}` : "/admin-print/reports";
   };
 
   const select = "rounded-lg border border-ink/10 bg-white px-3 py-2 text-xs text-ink";

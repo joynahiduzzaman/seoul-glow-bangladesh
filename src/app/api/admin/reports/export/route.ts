@@ -37,7 +37,7 @@ function describeFilters(sp: URLSearchParams): string {
  * export that silently covered only the visible page is the failure this is
  * written to avoid.
  *
- * PDF is not a format here: it's produced by /admin/reports/print, which is a
+ * PDF is not a format here: it's produced by /admin-print/reports, which is a
  * print-styled view of the same numbers that the browser saves as PDF — the
  * same mechanism the invoices and packing slips already use.
  */

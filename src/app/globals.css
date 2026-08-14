@@ -344,9 +344,39 @@ body:has(.print-doc-page) main {
   min-height: 0;
 }
 
+@page {
+  /* A real margin on the sheet. Without it the browser's default puts the
+     content within a few millimetres of the edge on some printers and clips it
+     on others, and a business document coming out lopsided looks careless. */
+  margin: 14mm 12mm;
+}
+
 @media print {
-  header, footer, .fixed, .no-print {
+  /* The storefront's own header and footer, not any <header>/<footer> inside a
+     printed document — the report's letterhead and its footnote are semantic
+     elements, and this rule was erasing both from the PDF. */
+  body > header,
+  body > footer,
+  .fixed,
+  .no-print {
     display: none !important;
+  }
+
+  /* Colours are printed as authored. Browsers drop backgrounds and lighten
+     borders by default to save ink, which is what turned the report's rules
+     and header bars into barely-visible grey. */
+  .print-doc-page,
+  .print-doc-page * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Each document keeps its own measure and padding — an invoice is meant to
+     sit in a column, not span the sheet edge to edge. Only the screen padding
+     that @page now provides is dropped. */
+  .print-doc-page {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
   }
   main {
     padding: 0 !important;
