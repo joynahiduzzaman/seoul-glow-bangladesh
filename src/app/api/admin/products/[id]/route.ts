@@ -3,6 +3,7 @@ import { prisma } from "@/server/db";
 import { getCurrentUser } from "@/server/auth";
 import { z } from "zod";
 import { PRODUCT_TEXTURES } from "@/lib/product-texture";
+import { revalidateCatalogue } from "@/server/catalogue-cache";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -87,6 +88,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const product = await prisma.product.update({ where: { id: params.id }, data });
+  // Covers the status field too: flipping a product to Draft is what empties a
+  // brand or category, and the menu has to notice.
+  revalidateCatalogue(product.slug);
   return NextResponse.json({ product });
 }
 
@@ -106,5 +110,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   }
 
   await prisma.product.delete({ where: { id: params.id } });
+  revalidateCatalogue();
   return NextResponse.json({ success: true });
 }

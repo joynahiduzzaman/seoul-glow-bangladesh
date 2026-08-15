@@ -29,12 +29,18 @@ export default function CategoryCard({
   priority?: boolean;
 }) {
   const count = category.productCount;
+  // Same rule as BrandCard: a category with nothing in it stays on the wall as a
+  // marked placeholder rather than a link to an empty shop grid.
+  const comingSoon = count === 0;
 
-  return (
-    <Link
-      href={`/shop?category=${category.slug}`}
-      className="group relative flex flex-col overflow-hidden rounded-xl2 border border-border-soft bg-white shadow-e1 transition-all duration-500 ease-silk hover:-translate-y-1 hover:border-rose-gold/30 hover:shadow-e4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-gold focus-visible:ring-offset-2"
-    >
+  const frameClass = `group relative flex flex-col overflow-hidden rounded-xl2 border border-border-soft bg-white shadow-e1 transition-all duration-500 ease-silk ${
+    comingSoon
+      ? "cursor-default"
+      : "hover:-translate-y-1 hover:border-rose-gold/30 hover:shadow-e4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-gold focus-visible:ring-offset-2"
+  }`;
+
+  const body = (
+    <>
       <div className="relative aspect-[5/4] w-full overflow-hidden bg-beige">
         {category.image ? (
           <Image
@@ -44,7 +50,9 @@ export default function CategoryCard({
             fill
             sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 22vw"
             priority={priority}
-            className="object-cover transition-transform duration-700 ease-silk group-hover:scale-[1.06]"
+            className={`object-cover transition-transform duration-700 ease-silk ${
+              comingSoon ? "" : "group-hover:scale-[1.06]"
+            }`}
           />
         ) : (
           <span className="flex h-full items-center justify-center font-display text-2xl text-rose-gold/50">
@@ -53,16 +61,44 @@ export default function CategoryCard({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col items-center gap-1 border-t border-border-soft bg-beige/40 px-3 py-3.5 text-center transition-colors duration-500 group-hover:bg-beige/70">
-        <span className="line-clamp-1 font-display text-[15px] leading-snug text-ink transition-colors duration-300 group-hover:text-rose-gold-text">
+      <div
+        className={`flex flex-1 flex-col items-center gap-1 border-t border-border-soft bg-beige/40 px-3 py-3.5 text-center transition-colors duration-500 ${
+          comingSoon ? "" : "group-hover:bg-beige/70"
+        }`}
+      >
+        <span
+          className={`line-clamp-1 font-display text-[15px] leading-snug text-ink transition-colors duration-300 ${
+            comingSoon ? "" : "group-hover:text-rose-gold-text"
+          }`}
+        >
           {category.name}
         </span>
-        {typeof count === "number" && (
-          <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink/50">
-            {count} {count === 1 ? "product" : "products"}
+        {comingSoon ? (
+          <span className="mt-0.5 inline-flex items-center rounded-full bg-rose-gold/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-gold-text ring-1 ring-rose-gold/25">
+            Coming soon
           </span>
+        ) : (
+          typeof count === "number" && (
+            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink/50">
+              {count} {count === 1 ? "product" : "products"}
+            </span>
+          )
         )}
       </div>
+    </>
+  );
+
+  if (comingSoon) {
+    return (
+      <div className={frameClass} aria-label={`${category.name} — coming soon`}>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={`/shop?category=${category.slug}`} className={frameClass}>
+      {body}
     </Link>
   );
 }

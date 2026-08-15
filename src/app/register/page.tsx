@@ -43,11 +43,12 @@ function RegisterForm() {
       // Same priority as login: an explicit ?redirect= wins, otherwise land on the
       // account dashboard rather than the homepage — registration is never staff,
       // so there's no admin branch to consider here.
+      // Pending state held through the navigation, and no router.refresh()
+      // racing it — same reasoning as the login page, written out there.
       router.push(redirectTo || "/account");
-      router.refresh();
+      setTimeout(() => setLoading(false), 8000);
     } catch (err: any) {
       toast.error(err.message || "Registration failed");
-    } finally {
       setLoading(false);
     }
   }

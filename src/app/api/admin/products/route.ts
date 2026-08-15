@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/server/auth";
 import slugify from "slugify";
 import { z } from "zod";
 import { PRODUCT_TEXTURES } from "@/lib/product-texture";
+import { revalidateCatalogue } from "@/server/catalogue-cache";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -102,5 +103,8 @@ export async function POST(req: NextRequest) {
       benefits: JSON.stringify((benefits ?? []).filter((b) => b.trim())),
     },
   });
+  // Nothing here purged any cache, so a new product waited out the 60-second ISR
+  // window before the shop showed it — and the header menu, five minutes.
+  revalidateCatalogue(product.slug);
   return NextResponse.json({ product }, { status: 201 });
 }

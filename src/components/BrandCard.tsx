@@ -45,12 +45,20 @@ function BrandMonogram({ name }: { name: string }) {
  */
 export default function BrandCard({ brand, priority }: { brand: BrandCardItem; priority?: boolean }) {
   const count = brand.productCount;
+  // A brand we carry but have nothing in stock from yet. It stays on the wall —
+  // knowing the shop is bringing a label in is useful — but it is not a link,
+  // because the page behind it is an empty grid and an apology. Marked, not
+  // hidden, and not silently clickable.
+  const comingSoon = count === 0;
 
-  return (
-    <Link
-      href={`/brands/${brand.slug}`}
-      className="group relative flex flex-col overflow-hidden rounded-xl2 border border-border-soft bg-white shadow-e1 transition-all duration-500 ease-silk hover:-translate-y-1 hover:border-rose-gold/30 hover:shadow-e4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-gold focus-visible:ring-offset-2"
-    >
+  const frameClass = `group relative flex flex-col overflow-hidden rounded-xl2 border border-border-soft bg-white shadow-e1 transition-all duration-500 ease-silk ${
+    comingSoon
+      ? "cursor-default"
+      : "hover:-translate-y-1 hover:border-rose-gold/30 hover:shadow-e4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-gold focus-visible:ring-offset-2"
+  }`;
+
+  const body = (
+    <>
       {/* Logo plate. aspect-[5/3] is wide enough that a 1.91:1 wordmark still has
           room to breathe, and short enough that a square roundel does not float
           in a tall empty box. */}
@@ -68,7 +76,9 @@ export default function BrandCard({ brand, priority }: { brand: BrandCardItem; p
               // against its ancestor's PADDING box — so padding on the wrapper is
               // ignored entirely and the trimmed marks ran to the card edge.
               // object-fit honours this element's own content box.
-              className="object-contain p-6 transition-transform duration-500 ease-silk group-hover:scale-[1.06] sm:p-8"
+              className={`object-contain p-6 transition-transform duration-500 ease-silk sm:p-8 ${
+                comingSoon ? "" : "group-hover:scale-[1.06]"
+              }`}
             />
           ) : brand.image ? (
             <Image
@@ -76,7 +86,9 @@ export default function BrandCard({ brand, priority }: { brand: BrandCardItem; p
               alt={`${brand.name} skincare`}
               fill
               sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 22vw"
-              className="object-cover transition-transform duration-700 ease-silk group-hover:scale-[1.08]"
+              className={`object-cover transition-transform duration-700 ease-silk ${
+                comingSoon ? "" : "group-hover:scale-[1.08]"
+              }`}
             />
           ) : (
             <BrandMonogram name={brand.name} />
@@ -86,16 +98,46 @@ export default function BrandCard({ brand, priority }: { brand: BrandCardItem; p
 
       {/* Label plate, tinted so the white logo area above reads as its own
           surface and the card gains a base to sit on. */}
-      <div className="flex flex-1 flex-col items-center gap-1 border-t border-border-soft bg-beige/40 px-3 py-3.5 text-center transition-colors duration-500 group-hover:bg-beige/70">
-        <span className="line-clamp-1 font-display text-[15px] leading-snug text-ink transition-colors duration-300 group-hover:text-rose-gold-text">
+      <div
+        className={`flex flex-1 flex-col items-center gap-1 border-t border-border-soft px-3 py-3.5 text-center transition-colors duration-500 ${
+          comingSoon ? "bg-beige/40" : "bg-beige/40 group-hover:bg-beige/70"
+        }`}
+      >
+        <span
+          className={`line-clamp-1 font-display text-[15px] leading-snug text-ink transition-colors duration-300 ${
+            comingSoon ? "" : "group-hover:text-rose-gold-text"
+          }`}
+        >
           {brand.name}
         </span>
-        {typeof count === "number" && (
-          <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink/50">
-            {count} {count === 1 ? "product" : "products"}
+        {comingSoon ? (
+          // A pill rather than grey text: it has to read as a deliberate status,
+          // not as a count that failed to load.
+          <span className="mt-0.5 inline-flex items-center rounded-full bg-rose-gold/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-gold-text ring-1 ring-rose-gold/25">
+            Coming soon
           </span>
+        ) : (
+          typeof count === "number" && (
+            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink/50">
+              {count} {count === 1 ? "product" : "products"}
+            </span>
+          )
         )}
       </div>
+    </>
+  );
+
+  if (comingSoon) {
+    return (
+      <div className={frameClass} aria-label={`${brand.name} — coming soon`}>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={`/brands/${brand.slug}`} className={frameClass}>
+      {body}
     </Link>
   );
 }

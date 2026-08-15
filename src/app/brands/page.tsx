@@ -25,9 +25,11 @@ export default async function BrandsPage() {
       slug: true,
       logo: true,
       country: true,
-      _count: { select: { products: true } },
+      // Counted with the same filter the brand page renders with, so a tile
+      // never promises products that the page it opens won't show.
+      _count: { select: { products: { where: { status: "ACTIVE" } } } },
       // Fallback tile art for a brand whose logo has not been uploaded yet.
-      products: { select: { images: true }, take: 1 },
+      products: { where: { status: "ACTIVE" }, select: { images: true }, take: 1 },
     },
   });
 

@@ -10,7 +10,7 @@ import { Dictionary, Locale } from "@/lib/i18n/dictionaries";
 import LanguageSwitcher from "./LanguageSwitcher";
 import Marquee from "./Marquee";
 import SearchOverlay from "./SearchOverlay";
-import MegaMenu from "./MegaMenu";
+import MegaMenu, { type MegaMenuLink } from "./MegaMenu";
 import AccountMenu, { type SessionUser } from "./AccountMenu";
 import NotificationBell from "./NotificationBell";
 
@@ -18,34 +18,25 @@ import NotificationBell from "./NotificationBell";
 // product exists, both panels use its photography instead.
 const MENU_IMAGE_FALLBACK = "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=80";
 
-const BRAND_LINKS = [
-  { label: "COSRX", href: "/brands/cosrx" },
-  { label: "Beauty of Joseon", href: "/brands/beauty-of-joseon" },
-  { label: "Anua", href: "/brands/anua" },
-  { label: "SKIN1004", href: "/brands/skin1004" },
-  { label: "Round Lab", href: "/brands/round-lab" },
-  { label: "Laneige", href: "/brands/laneige" },
-];
-
-const CATEGORY_LINKS = [
-  { label: "Cleanser", href: "/shop?category=cleanser" },
-  { label: "Toner", href: "/shop?category=toner" },
-  { label: "Serum", href: "/shop?category=serum" },
-  { label: "Sunscreen", href: "/shop?category=sunscreen" },
-  { label: "Moisturizer", href: "/shop?category=moisturizer" },
-  { label: "Masks", href: "/shop?category=masks" },
-];
-
 export default function Header({
   locale,
   dict,
   menuImages,
+  brandLinks = [],
+  categoryLinks = [],
 }: {
   locale: Locale;
   dict: Dictionary;
   /** Real shop photography for the two mega-menu panels. Stock stand-ins were
    *  shipped here; a shop with its own catalogue should show its own. */
   menuImages?: { brands?: string | null; categories?: string | null };
+  /** Read from the catalogue in the layout (see server/nav-menu.ts). Both were
+   *  hardcoded lists that went stale: the Brands panel advertised two labels
+   *  with no products and hid a dozen that had them. Only entries with at
+   *  least one active product arrive here, so a menu link always lands on a
+   *  page with something on it. */
+  brandLinks?: MegaMenuLink[];
+  categoryLinks?: MegaMenuLink[];
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -169,7 +160,7 @@ export default function Header({
             <MegaMenu
               label={dict.nav.brands}
               triggerHref="/brands"
-              links={BRAND_LINKS}
+              links={brandLinks}
               image={menuImages?.brands || MENU_IMAGE_FALLBACK}
               caption="Direct from South Korea's most-loved skincare labels."
               // Pointed at /shop, so a button reading "All Brands" dropped the
@@ -184,7 +175,7 @@ export default function Header({
               // serums only, and its "Shop All Skincare" button opened the
               // unfiltered product grid. Both now open the category directory.
               triggerHref="/categories"
-              links={CATEGORY_LINKS}
+              links={categoryLinks}
               image={menuImages?.categories || MENU_IMAGE_FALLBACK}
               caption="Build your routine, one step at a time."
               ctaLabel="View All Categories"

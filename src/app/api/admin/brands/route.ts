@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db";
 import { getCurrentUser } from "@/server/auth";
 import { toSlug, uniqueSlug } from "@/server/taxonomy";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { revalidateCatalogue } from "@/server/catalogue-cache";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
   });
 
   // The homepage category grid and the shop filters both read this list.
-  revalidatePath("/");
-  revalidatePath("/shop");
+  revalidateCatalogue();
   return NextResponse.json({ brand }, { status: 201 });
 }

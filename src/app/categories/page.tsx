@@ -22,7 +22,9 @@ export default async function CategoriesPage() {
       name: true,
       slug: true,
       image: true,
-      _count: { select: { products: true } },
+      // Only ACTIVE products count, matching what /shop?category= will render.
+      // An unfiltered count promised products the shop grid then didn't show.
+      _count: { select: { products: { where: { status: "ACTIVE" } } } },
     },
   });
 

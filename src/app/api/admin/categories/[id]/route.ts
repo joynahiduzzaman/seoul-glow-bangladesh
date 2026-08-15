@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db";
 import { getCurrentUser } from "@/server/auth";
 import { toSlug, uniqueSlug, blockingProductCount } from "@/server/taxonomy";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { deleteImageByUrl } from "@/server/uploads/cloudinary";
+import { revalidateCatalogue } from "@/server/catalogue-cache";
 
 async function requireAdmin() {
   const user = await getCurrentUser();
@@ -48,8 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const category = await prisma.category.update({ where: { id: params.id }, data });
   if (previousImage) await deleteImageByUrl(previousImage);
-  revalidatePath("/");
-  revalidatePath("/shop");
+  revalidateCatalogue();
   return NextResponse.json({ category });
 }
 
@@ -76,7 +75,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   await deleteImageByUrl(existing.image);
   await prisma.category.delete({ where: { id: params.id } });
-  revalidatePath("/");
-  revalidatePath("/shop");
+  revalidateCatalogue();
   return NextResponse.json({ ok: true });
 }

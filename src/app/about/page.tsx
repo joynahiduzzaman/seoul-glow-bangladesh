@@ -4,6 +4,7 @@ import { Sparkles, FlaskConical, Heart, ShieldCheck, PackageSearch, PlaneTakeoff
 import ScrollReveal from "@/components/ScrollReveal";
 import FaqAccordion from "@/components/FaqAccordion";
 import { getPageContent, text, rows } from "@/server/content";
+import { getNavMenu } from "@/server/nav-menu";
 
 export const metadata = { title: "About Us" };
 
@@ -22,7 +23,8 @@ const FAQS = [
 ];
 
 export default async function AboutPage() {
-  const content = await getPageContent("about");
+  const [content, nav] = await Promise.all([getPageContent("about"), getNavMenu()]);
+  const brandPartners = nav.brands;
   const promises = rows(content, "promises");
   const whyItems = rows(content, "whyItems");
   const processSteps = rows(content, "processSteps");
@@ -189,31 +191,30 @@ export default async function AboutPage() {
       )}
 
       {/* Brand Partners */}
+      {brandPartners.length > 0 && (
       <section className="container-px mx-auto section-py">
         <ScrollReveal className="text-center max-w-lg mx-auto mb-14">
           <p className="text-xs uppercase tracking-[0.2em] text-gold-text font-semibold mb-4">Brand Partners</p>
           <h2 className="section-title">Sourced directly. Nothing in between.</h2>
         </ScrollReveal>
+        {/* Read from the catalogue rather than hardcoded. The list here named
+            Round Lab and Laneige, neither of which has a product — a "Brand
+            Partners" wall linking to empty pages undercuts the exact claim the
+            section is making. */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 md:gap-6">
-          {[
-            ["cosrx", "COSRX"],
-            ["beauty-of-joseon", "Beauty of Joseon"],
-            ["anua", "Anua"],
-            ["skin1004", "SKIN1004"],
-            ["round-lab", "Round Lab"],
-            ["laneige", "Laneige"],
-          ].map(([slug, label], i) => (
-            <ScrollReveal key={slug} delay={i * 0.05}>
+          {brandPartners.map((brand, i) => (
+            <ScrollReveal key={brand.href} delay={i * 0.05}>
               <Link
-                href={`/brands/${slug}`}
+                href={brand.href}
                 className="flex items-center justify-center h-24 rounded-xl2 bg-white border border-border-soft shadow-soft hover:shadow-e3 hover:-translate-y-1 transition-all font-display text-sm md:text-base text-center px-2 text-ink/70 hover:text-rose-gold-text"
               >
-                {label}
+                {brand.label}
               </Link>
             </ScrollReveal>
           ))}
         </div>
       </section>
+      )}
 
       {/* FAQ */}
       <section className="container-px mx-auto section-py max-w-2xl">

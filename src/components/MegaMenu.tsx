@@ -64,7 +64,15 @@ export default function MegaMenu({ label, triggerHref, links, image, caption, ct
                 </li>
               ))}
             </ul>
-            <Link href={ctaHref} className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-gold-text mt-5 hover:gap-2.5 transition-all">
+            {/* mt-5 only when there is a list above it to be spaced from: the
+                links are read from the catalogue now, so an empty shop gets a
+                panel that is just the caption and this button. */}
+            <Link
+              href={ctaHref}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold text-rose-gold-text hover:gap-2.5 transition-all ${
+                links.length > 0 ? "mt-5" : ""
+              }`}
+            >
               {ctaLabel} <ArrowRight size={13} />
             </Link>
           </div>
