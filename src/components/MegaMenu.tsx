@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useRef } from "react";
 import { ArrowRight } from "lucide-react";
 
@@ -77,8 +78,27 @@ export default function MegaMenu({ label, triggerHref, links, image, caption, ct
             </Link>
           </div>
           <div className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            {/* next/image with an explicit `sizes`, not a raw <img>.
+
+                This panel is 420px wide and half of it is this picture, so the
+                image is displayed at 210px. As a plain <img> it fetched the
+                full-resolution catalogue original — 1 to 2 MB — and because
+                there are two of these panels in the header, that happened twice
+                on every page of the site, for images inside a dropdown nobody
+                had opened yet. Through the optimizer at 210px the pair costs
+                about 25 KB.
+
+                loading="lazy" on top of that: the panel is hidden until hover,
+                so there is no reason to spend the request during page load. */}
+            <Image
+              src={image}
+              alt=""
+              aria-hidden="true"
+              fill
+              sizes="210px"
+              loading="lazy"
+              className="object-cover"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-ink/70 to-transparent" />
             <p className="absolute bottom-4 left-4 right-4 text-xs text-white font-medium leading-snug">{caption}</p>
           </div>

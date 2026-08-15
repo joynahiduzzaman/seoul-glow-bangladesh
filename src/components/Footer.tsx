@@ -158,8 +158,24 @@ export default async function Footer({ locale, dict }: { locale: Locale; dict: D
                   aria-label={`Open Seoul Glow Bangladesh on Instagram (photo ${i + 1})`}
                   className="relative aspect-square rounded-md overflow-hidden"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt="" className="h-full w-full object-cover hover:scale-110 transition-transform duration-300" />
+                  {/* next/image, not a raw <img>. These are full-resolution
+                      catalogue photographs — 1 to 2 MB each straight from
+                      Cloudinary — being displayed at about 80px square, in the
+                      footer, on every page of the site. Four of them was ~4 MB
+                      of the ~6.6 MB a page weighed. Through the optimizer the
+                      same four come to roughly 20 KB.
+
+                      `sizes` is what makes that work: without it next/image
+                      assumes full viewport width and serves a 1920px-wide
+                      variant for an 80px box. */}
+                  <Image
+                    src={img}
+                    alt=""
+                    aria-hidden="true"
+                    fill
+                    sizes="80px"
+                    className="object-cover transition-transform duration-300 hover:scale-110"
+                  />
                 </a>
               ))}
             </div>
