@@ -36,6 +36,7 @@ export default function AuthenticityPage() {
           src="https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=1600&q=80"
           alt="Korean skincare packaging detail"
           fill
+          sizes="100vw"
           priority
           className="object-cover"
         />
@@ -91,6 +92,7 @@ export default function AuthenticityPage() {
                 src="https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=900&q=80"
                 alt="Skincare packaging showing printed batch code detail"
                 fill
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover"
               />
             </div>

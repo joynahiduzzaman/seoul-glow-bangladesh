@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function CustomBanner({
   title,
@@ -26,8 +27,21 @@ export default function CustomBanner({
       <div className="relative rounded-xl2 overflow-hidden">
         {image && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            {/* next/image, not a raw <img>. This is an admin-uploaded banner
+                shown full-bleed on the home page: as a plain <img> the browser
+                fetched the Cloudinary original at whatever resolution it was
+                uploaded at — commonly 2000px+ and a megabyte or two — and
+                scaled it down. The banner spans the content column, so 100vw
+                is honest here; the win is the optimizer's format and
+                resolution ladder, not a narrower box. */}
+            <Image
+              src={image}
+              alt=""
+              aria-hidden="true"
+              fill
+              sizes="100vw"
+              className="object-cover"
+            />
             <div className="absolute inset-0 bg-ink/45" />
           </>
         )}

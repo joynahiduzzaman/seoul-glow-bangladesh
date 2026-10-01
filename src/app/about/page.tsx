@@ -39,6 +39,10 @@ export default async function AboutPage() {
             src={text(content, "heroImage")}
             alt={text(content, "heroTitle")}
             fill
+            // Full-bleed hero, so 100vw is the honest answer. Without any
+            // `sizes` next/image assumes exactly this anyway — stating it keeps
+            // the intent explicit next to the ones below that are not 100vw.
+            sizes="100vw"
             priority
             className="object-cover"
           />
@@ -82,6 +86,7 @@ export default async function AboutPage() {
                 src={text(content, "storyImage")}
                 alt={text(content, "storyTitle")}
                 fill
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover"
               />
             )}

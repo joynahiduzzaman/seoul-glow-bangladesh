@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import { Dictionary } from "@/lib/i18n/dictionaries";
@@ -50,8 +51,18 @@ export default function Newsletter({
       <div className="relative overflow-hidden rounded-xl2 text-cream px-8 py-14 text-center">
         {backgroundImage ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={backgroundImage} alt="" className="absolute inset-0 h-full w-full object-cover -z-10" />
+            {/* Same reasoning as CustomBanner: an admin-uploaded photo behind
+                the newsletter block, full-bleed, previously fetched at its
+                original upload resolution. -z-10 is kept so the tint and the
+                copy stay above it. */}
+            <Image
+              src={backgroundImage}
+              alt=""
+              aria-hidden="true"
+              fill
+              sizes="100vw"
+              className="object-cover -z-10"
+            />
             {/* 80 rather than 70: the copy has to clear 4.5:1 over whatever
                 photo an admin uploads, not just over a convenient one. */}
             <div className="absolute inset-0 bg-ink/80 -z-10" />
