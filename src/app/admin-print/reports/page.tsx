@@ -105,6 +105,8 @@ export default async function ReportPrintPage({ searchParams }: { searchParams: 
     ["Discounts", `−${formatBDT(s.discount)}`],
     ["Courier charges", formatBDT(s.shipping)],
     ["Average order", formatBDT(s.averageOrder)],
+    ["Product cost", `−${formatBDT(s.cogs)}`],
+    ["Gross profit", `${formatBDT(s.grossProfit)} (${s.grossMargin.toFixed(1)}%)`],
   ];
 
   return (
@@ -216,6 +218,8 @@ export default async function ReportPrintPage({ searchParams }: { searchParams: 
 
             <footer className="mt-8 border-t border-ink/15 pt-3 text-[9.5px] leading-relaxed text-ink/50">
               <p>
+                Gross profit is item revenue minus product cost; it does not deduct operating expenses such as
+                courier bills, ads or salaries, so it is not net profit.
                 Product, category and brand totals are line-item values and add up to the items subtotal, not the net —
                 delivery and order-level discounts don&apos;t belong to any one product. Payment method and order source
                 totals are whole orders and do add up to the net.

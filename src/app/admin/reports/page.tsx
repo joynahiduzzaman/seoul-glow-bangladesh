@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/server/db";
 import { formatBDT } from "@/lib/utils";
-import { ShoppingBag, Package, Wallet, HandCoins, TicketPercent, Truck } from "lucide-react";
+import { ShoppingBag, Package, Wallet, HandCoins, TicketPercent, Truck, Coins, PiggyBank } from "lucide-react";
 import StatCard from "@/components/admin/StatCard";
 import SimpleBarChart from "@/components/admin/SimpleBarChart";
 import ReportFilterBar from "@/components/admin/ReportFilterBar";
@@ -60,6 +61,62 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
         <StatCard icon={Truck} label="Avg. order" value={formatBDT(s.averageOrder)} tone="default" hint="Net ÷ orders" />
       </div>
 
+      <section className="mb-6">
+        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink/70">
+          Profit on the items sold
+        </h2>
+        <div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            icon={Package}
+            label="Item revenue"
+            value={formatBDT(s.itemRevenue)}
+            tone="default"
+            hint="Line values, before delivery"
+          />
+          <StatCard
+            icon={Coins}
+            label="Product cost"
+            value={formatBDT(s.cogs)}
+            tone="warning"
+            hint="What the goods cost you"
+          />
+          <StatCard
+            icon={PiggyBank}
+            label="Gross profit"
+            value={formatBDT(s.grossProfit)}
+            tone={s.grossProfit < 0 ? "danger" : "success"}
+            hint={`${s.grossMargin.toFixed(1)}% margin`}
+          />
+          <StatCard
+            icon={Wallet}
+            label="Net profit"
+            value="On dashboard"
+            tone="info"
+            hint="Needs expenses, which aren't per-product"
+            href="/admin"
+          />
+        </div>
+        <p className="mt-2.5 text-xs leading-relaxed text-ink/55">
+          These figures are per line item, so they reconcile against the product, category and brand tables
+          below rather than against &ldquo;Net total&rdquo; above — delivery and order-wide discounts belong to
+          no single product. Operating expenses (courier bills, ads, salaries) can&apos;t be attributed to one
+          product either, so they are not deducted here;{" "}
+          <Link href="/admin" className="text-rose-gold-text underline">
+            the dashboard
+          </Link>{" "}
+          shows net profit after them.
+          {s.unitsMissingCost > 0 && (
+            <>
+              {" "}
+              <span className="text-gold">
+                {s.unitsMissingCost} unit{s.unitsMissingCost === 1 ? "" : "s"} in this range have no cost price
+                recorded, so profit reads higher than it is.
+              </span>
+            </>
+          )}
+        </p>
+      </section>
+
       {s.orders === 0 ? (
         <div className="rounded-xl2 bg-white p-12 text-center shadow-soft">
           <h2 className="font-display text-xl">No orders in this range</h2>
@@ -81,9 +138,9 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
           </section>
 
           <div className="grid gap-6 xl:grid-cols-2">
-            <ReportTable title="Product sales" labelHeader="Product" rows={report.products} limit={ON_SCREEN_ROWS} />
-            <ReportTable title="Category sales" labelHeader="Category" rows={report.categories} limit={ON_SCREEN_ROWS} />
-            <ReportTable title="Brand sales" labelHeader="Brand" rows={report.brands} limit={ON_SCREEN_ROWS} />
+            <ReportTable title="Product sales" labelHeader="Product" rows={report.products} limit={ON_SCREEN_ROWS} showProfit />
+            <ReportTable title="Category sales" labelHeader="Category" rows={report.categories} limit={ON_SCREEN_ROWS} showProfit />
+            <ReportTable title="Brand sales" labelHeader="Brand" rows={report.brands} limit={ON_SCREEN_ROWS} showProfit />
             <div className="grid min-w-0 gap-6">
               <ReportTable title="Payment methods" labelHeader="Method" rows={report.payments} showUnits={false} />
               <ReportTable title="Order sources" labelHeader="Source" rows={report.sources} showUnits={false} />

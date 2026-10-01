@@ -11,6 +11,7 @@ export default function ReportTable({
   rows,
   labelHeader,
   showUnits = true,
+  showProfit = false,
   emptyMessage = "Nothing in this range.",
   limit,
 }: {
@@ -18,6 +19,9 @@ export default function ReportTable({
   rows: BreakdownRow[];
   labelHeader: string;
   showUnits?: boolean;
+  /** Cost, gross profit and margin columns. Off for the whole-order groupings
+   *  (payment method, order source), which carry no line-level cost. */
+  showProfit?: boolean;
   emptyMessage?: string;
   limit?: number;
 }) {
@@ -45,7 +49,10 @@ export default function ReportTable({
                 <th className="pb-2 pr-3">{labelHeader}</th>
                 {showUnits && <th className="pb-2 px-3 text-right">Units</th>}
                 <th className="pb-2 px-3 text-right">Orders</th>
-                <th className="pb-2 pl-3 text-right">Total</th>
+                <th className="pb-2 px-3 text-right">Revenue</th>
+                {showProfit && <th className="pb-2 px-3 text-right">Cost</th>}
+                {showProfit && <th className="pb-2 px-3 text-right">Profit</th>}
+                {showProfit && <th className="pb-2 pl-3 text-right">Margin</th>}
                 {/* The share bar is decoration; on a phone the four real
                     columns already fill the width, and a fixed 96px extra is
                     what pushed the card past the viewport. */}
@@ -65,7 +72,33 @@ export default function ReportTable({
                     </td>
                     {showUnits && <td className="px-3 py-2.5 text-right tabular-nums text-ink/70">{r.units}</td>}
                     <td className="px-3 py-2.5 text-right tabular-nums text-ink/70">{r.orders}</td>
-                    <td className="py-2.5 pl-3 text-right font-medium tabular-nums">{formatBDT(r.total)}</td>
+                    <td className="px-3 py-2.5 text-right font-medium tabular-nums">{formatBDT(r.total)}</td>
+                    {showProfit && (
+                      <td className="px-3 py-2.5 text-right tabular-nums text-ink/70">{formatBDT(r.cost)}</td>
+                    )}
+                    {showProfit && (
+                      <td
+                        className={`px-3 py-2.5 text-right font-medium tabular-nums ${
+                          r.profit < 0 ? "text-badge-sale" : "text-success"
+                        }`}
+                      >
+                        {formatBDT(r.profit)}
+                      </td>
+                    )}
+                    {showProfit && (
+                      <td className="py-2.5 pl-3 text-right tabular-nums text-ink/70">
+                        {r.total > 0 ? `${((r.profit / r.total) * 100).toFixed(0)}%` : "—"}
+                        {r.unitsMissingCost > 0 && (
+                          <span
+                            title={`${r.unitsMissingCost} unit(s) have no cost price recorded, so this margin reads high`}
+                            className="ml-1 text-gold"
+                            aria-label="Some units have no cost price recorded"
+                          >
+                            *
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="hidden py-2.5 pl-3 sm:table-cell">
                       <span className="block h-1.5 w-full rounded-full bg-beige" aria-hidden="true">
                         <span className="block h-full rounded-full bg-rose-gold" style={{ width: `${Math.max(share, 2)}%` }} />

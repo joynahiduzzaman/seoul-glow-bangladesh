@@ -15,6 +15,7 @@ import {
   FolderTree,
   BarChart3,
   Sparkles,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ import {
 const ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
   reports: BarChart3,
+  expenses: Receipt,
   products: Package,
   orders: ShoppingCart,
   coupons: Tag,
@@ -36,10 +38,16 @@ const ICONS: Record<string, LucideIcon> = {
   brands: Sparkles,
 };
 
+/** The icon keys a nav item may use, derived from the map above rather than
+ *  restated. AdminShell used to keep its own hand-written copy of this union,
+ *  which meant adding a nav entry type-checked in one file and failed in the
+ *  other until both were edited. */
+export type AdminNavIcon = keyof typeof ICONS;
+
 interface NavItem {
   label: string;
   href: string;
-  icon: keyof typeof ICONS;
+  icon: AdminNavIcon;
   badge?: number;
 }
 

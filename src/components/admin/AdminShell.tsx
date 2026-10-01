@@ -4,13 +4,13 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Menu, X, Store } from "lucide-react";
-import AdminSidebarNav from "./AdminSidebarNav";
+import AdminSidebarNav, { type AdminNavIcon } from "./AdminSidebarNav";
 import AdminUserMenu from "./AdminUserMenu";
 
 interface NavItem {
   label: string;
   href: string;
-  icon: "dashboard" | "products" | "orders" | "coupons" | "affiliates" | "support" | "inventory" | "homepage" | "content" | "categories" | "brands" | "reports";
+  icon: AdminNavIcon;
   badge?: number;
 }
 

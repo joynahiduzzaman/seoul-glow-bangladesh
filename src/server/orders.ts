@@ -33,6 +33,10 @@ export interface VerifiedLine {
   image?: string;
   price: number;
   quantity: number;
+  /** What the shop paid for one unit, read from the product as the order is
+   *  priced and then frozen onto the order line. Null when the product has no
+   *  cost recorded. See the costPrice note on OrderItem in schema.prisma. */
+  costPrice: number | null;
 }
 
 /** Re-derives real prices and stock from the DB — the client-submitted price is
@@ -68,6 +72,9 @@ export async function verifyOrderItems(
       name: dbProduct.name,
       image: parseJsonArray(dbProduct.images)[0],
       price: discountedPrice(dbProduct.price, dbProduct.discountPercent),
+      // Captured here, where the product row is already in hand, so both the
+      // checkout and the admin's manual order freeze cost the same way.
+      costPrice: dbProduct.costPrice ?? null,
       quantity: item.quantity,
     };
   });
@@ -164,6 +171,7 @@ export async function createOrderRecord(input: CreateOrderRecordInput) {
           name: i.name,
           image: i.image,
           price: i.price,
+          costPrice: i.costPrice,
           quantity: i.quantity,
         })),
       },

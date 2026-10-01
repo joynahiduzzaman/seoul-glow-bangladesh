@@ -4,11 +4,13 @@ import { formatBDT } from "@/lib/utils";
 import StatCard from "@/components/admin/StatCard";
 import NeedsAction from "@/components/admin/NeedsAction";
 import SimpleBarChart from "@/components/admin/SimpleBarChart";
+import ProfitOverview from "@/components/admin/ProfitOverview";
 import { getRevenueSummary, getDailyRevenue, getBestSellers } from "@/server/revenue";
+import { getProfitSummary, getMonthOverMonth, resolvePeriod, PERIODS } from "@/server/finance";
 import {
   Wallet, TrendingUp, CalendarCheck, Clock, PackageSearch, CheckCircle2, XCircle,
   AlertTriangle, PackageX, Plus, ShoppingCart, Tag, LifeBuoy, Users, Package,
-  CalendarClock, CalendarX,
+  CalendarClock, CalendarX, Receipt,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -27,8 +29,13 @@ function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({
+  searchParams,
+}: {
+  searchParams: { period?: string };
+}) {
   const now = new Date();
+  const period = resolvePeriod(searchParams.period);
   const todayStart = startOfDay(now);
   const monthStart = startOfMonth(now);
   const sevenDaysAgo = new Date(todayStart);
@@ -98,8 +105,16 @@ export default async function AdminDashboard() {
 
   const bestSellers = await getBestSellers(5);
 
+  // Profit for the selected period, plus the month-on-month comparison that
+  // turns a bare number into a direction of travel.
+  const [profit, momentum] = await Promise.all([
+    getProfitSummary(period.from, period.to),
+    getMonthOverMonth(now),
+  ]);
+
   const QUICK_ACTIONS = [
     { label: "Add Product", href: "/admin/products/new", icon: Plus },
+    { label: "Record Expense", href: "/admin/expenses", icon: Receipt },
     { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
     { label: "Coupons", href: "/admin/coupons", icon: Tag },
     { label: "Support", href: "/admin/support-tickets", icon: LifeBuoy },
@@ -107,15 +122,56 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-[2rem] font-semibold tracking-tight leading-tight">Dashboard</h1>
-        <p className="mt-1 text-sm text-ink/70">Here&apos;s how the store is doing today.</p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-[2rem] font-semibold tracking-tight leading-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-ink/70">Here&apos;s how the store is doing today.</p>
+        </div>
+        {/* Scopes the P&L block only. The counts below it (orders awaiting
+            fulfilment, stock levels) are "right now" facts that a date range
+            would make meaningless. */}
+        <nav aria-label="Profit period" className="flex flex-wrap gap-1.5">
+          {PERIODS.map((p) => (
+            <Link
+              key={p.value}
+              href={`/admin?period=${p.value}`}
+              aria-current={p.value === period.value ? "page" : undefined}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                p.value === period.value
+                  ? "bg-ink text-cream"
+                  : "border border-border-soft bg-white text-ink/70 hover:bg-cream"
+              }`}
+            >
+              {p.label}
+            </Link>
+          ))}
+        </nav>
       </div>
+
+      <ProfitOverview
+        summary={profit}
+        periodLabel={period.label}
+        profitChange={period.value === "month" ? momentum.profitChange : null}
+      />
 
       {/* Revenue + today headline row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard icon={Wallet} label="Total Revenue" value={formatBDT(totalRevenue)} tone="success" hint="Delivered orders, all time" />
-        <StatCard icon={TrendingUp} label="Monthly Revenue" value={formatBDT(monthlyRevenue)} tone="info" hint="Delivered this calendar month" />
+        <StatCard
+          icon={TrendingUp}
+          label="Monthly Revenue"
+          value={formatBDT(monthlyRevenue)}
+          tone="info"
+          hint="Delivered this calendar month"
+          trend={
+            momentum.revenueChange == null
+              ? undefined
+              : {
+                  value: `${Math.abs(momentum.revenueChange).toFixed(0)}%`,
+                  direction: momentum.revenueChange > 0 ? "up" : momentum.revenueChange < 0 ? "down" : "flat",
+                }
+          }
+        />
         {/* Clickable: the number was already the interesting part, and the
             orders list now takes a date range, so it can land on exactly the
             orders it counts. */}
@@ -212,7 +268,7 @@ export default async function AdminDashboard() {
       {/* Quick actions */}
       <section>
         <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink/70">Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {QUICK_ACTIONS.map(({ label, href, icon: Icon }) => (
             <Link
               key={href}

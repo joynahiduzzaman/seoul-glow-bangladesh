@@ -7,6 +7,12 @@ import type { Sheet } from "./xlsx";
  * CSV and Excel both render from this, so the two exports can't contain
  * different numbers, and adding a column means editing one place.
  */
+/** Margin as a plain number for the spreadsheet; 0 when a row has no revenue,
+ *  so the cell never reads NaN. */
+function marginPct(profit: number, revenue: number): number {
+  return revenue > 0 ? Number(((profit / revenue) * 100).toFixed(1)) : 0;
+}
+
 export function reportSheets(report: FullReport, meta: { filters: string; generated: string }): Sheet[] {
   const s = report.summary;
 
@@ -30,6 +36,17 @@ export function reportSheets(report: FullReport, meta: { filters: string; genera
         // delivered order is money actually collected.
         ["Delivered orders", s.deliveredOrders],
         ["Collected (delivered only)", s.deliveredNet],
+        [],
+        // Line-level, so these reconcile against the Products sheet rather
+        // than against "Net total", which carries delivery and order-wide
+        // discounts that belong to no single product.
+        ["Item revenue", s.itemRevenue],
+        ["Product cost", -s.cogs],
+        ["Gross profit", s.grossProfit],
+        ["Gross margin %", Number(s.grossMargin.toFixed(1))],
+        ["Units with no cost recorded", s.unitsMissingCost],
+        [],
+        ["Note", "Gross profit excludes operating expenses (courier, ads, salary). See the dashboard for net profit."],
       ],
     },
     {
@@ -39,17 +56,25 @@ export function reportSheets(report: FullReport, meta: { filters: string; genera
     {
       name: "Products",
       rows: [
-        ["Product", "Brand", "Units", "Orders", "Total"],
-        ...report.products.map((p) => [p.label, p.sublabel || "", p.units, p.orders, p.total]),
+        ["Product", "Brand", "Units", "Orders", "Revenue", "Cost", "Gross profit", "Margin %"],
+        ...report.products.map((p) => [
+          p.label, p.sublabel || "", p.units, p.orders, p.total, p.cost, p.profit, marginPct(p.profit, p.total),
+        ]),
       ],
     },
     {
       name: "Categories",
-      rows: [["Category", "Units", "Orders", "Total"], ...report.categories.map((c) => [c.label, c.units, c.orders, c.total])],
+      rows: [
+        ["Category", "Units", "Orders", "Revenue", "Cost", "Gross profit", "Margin %"],
+        ...report.categories.map((c) => [c.label, c.units, c.orders, c.total, c.cost, c.profit, marginPct(c.profit, c.total)]),
+      ],
     },
     {
       name: "Brands",
-      rows: [["Brand", "Units", "Orders", "Total"], ...report.brands.map((b) => [b.label, b.units, b.orders, b.total])],
+      rows: [
+        ["Brand", "Units", "Orders", "Revenue", "Cost", "Gross profit", "Margin %"],
+        ...report.brands.map((b) => [b.label, b.units, b.orders, b.total, b.cost, b.profit, marginPct(b.profit, b.total)]),
+      ],
     },
     {
       name: "Payment methods",
