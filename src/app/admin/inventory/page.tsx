@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/server/db";
+import { getCurrentUser } from "@/server/auth";
 import { getReservedQuantities } from "@/server/inventory";
 import StockAdjustButton from "@/components/admin/StockAdjustButton";
 import { AlertTriangle, PackageX, PackageCheck, Search, CalendarClock, CalendarX } from "lucide-react";
@@ -10,9 +11,24 @@ export const dynamic = "force-dynamic";
 // Product Form's live hint — one threshold everywhere a product's freshness is judged.
 const EXPIRY_SOON_DAYS = 60;
 
-export default async function InventoryPage({ searchParams }: { searchParams: { q?: string; filter?: string } }) {
+// Matches the products list. This page used to load the entire catalogue in
+// one query with no limit — fine at 50 products, a slow page and a large
+// payload at 500, and it also fanned out into getReservedQuantities() for
+// every row.
+const PAGE_SIZE = 20;
+
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; filter?: string; page?: string };
+}) {
   const q = searchParams.q?.trim() || "";
   const filter = searchParams.filter || "all";
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  // Recording what a restock cost writes an Expense, which the expenses API
+  // restricts to ADMIN/MANAGER. STAFF still adjust stock, just without the cost.
+  const viewer = await getCurrentUser();
+  const canRecordCost = Boolean(viewer && ["ADMIN", "MANAGER"].includes(viewer.role));
   const now = new Date();
   const expirySoonCutoff = new Date(now);
   expirySoonCutoff.setDate(expirySoonCutoff.getDate() + EXPIRY_SOON_DAYS);
@@ -24,18 +40,36 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
   if (filter === "expiring") where.expiryDate = { gte: now, lte: expirySoonCutoff };
   if (filter === "expired") where.expiryDate = { lt: now };
 
-  const [products, lowStockCount, outOfStockCount, expiringSoonCount, expiredCount, recentHistory] = await Promise.all([
+  const [products, matchingCount, lowStockCount, outOfStockCount, expiringSoonCount, expiredCount, recentHistory] =
+    await Promise.all([
     prisma.product.findMany({
       where,
       orderBy: filter === "expiring" || filter === "expired" ? { expiryDate: "asc" } : { stock: "asc" },
       include: { brand: { select: { name: true } } },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
+    // Counts the filtered set, which the five filter chips below do not: those
+    // each count their own condition across the whole catalogue.
+    prisma.product.count({ where }),
     prisma.product.count({ where: { stock: { gt: 0, lt: 10 } } }),
     prisma.product.count({ where: { stock: 0 } }),
     prisma.product.count({ where: { expiryDate: { gte: now, lte: expirySoonCutoff }, stock: { gt: 0 } } }),
     prisma.product.count({ where: { expiryDate: { lt: now }, stock: { gt: 0 } } }),
     prisma.stockAdjustment.findMany({ orderBy: { createdAt: "desc" }, take: 15, include: { product: { select: { name: true } } } }),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(matchingCount / PAGE_SIZE));
+
+  /** Keeps the search term and filter while moving between pages. */
+  function pageHref(target: number) {
+    const params = new URLSearchParams();
+    if (filter !== "all") params.set("filter", filter);
+    if (q) params.set("q", q);
+    if (target > 1) params.set("page", String(target));
+    const qs = params.toString();
+    return `/admin/inventory${qs ? `?${qs}` : ""}`;
+  }
 
   const reserved = await getReservedQuantities(products.map((p) => p.id));
 
@@ -109,7 +143,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
                   <td className="p-4 font-medium">{available}</td>
                   <td className="p-4"><StockBadge stock={p.stock} /></td>
                   <td className="p-4"><ExpiryBadge expiryDate={p.expiryDate} /></td>
-                  <td className="p-4"><StockAdjustButton productId={p.id} productName={p.name} /></td>
+                  <td className="p-4"><StockAdjustButton productId={p.id} productName={p.name} canRecordCost={canRecordCost} /></td>
                 </tr>
               );
             })}
@@ -121,6 +155,37 @@ export default async function InventoryPage({ searchParams }: { searchParams: { 
           </p>
         )}
       </div>
+
+      {/* Pagination — same shape as the products list, so the two pages behave
+          identically. Hidden entirely when everything already fits on one page. */}
+      {totalPages > 1 && (
+        <div className="mb-8 mt-6 flex items-center justify-between text-sm text-ink/70">
+          <p>
+            Showing {matchingCount === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}&ndash;
+            {Math.min(page * PAGE_SIZE, matchingCount)} of {matchingCount} products
+          </p>
+          <div className="flex gap-2">
+            <Link
+              href={pageHref(page - 1)}
+              aria-disabled={page <= 1}
+              className={`rounded-full px-4 py-2 text-xs font-medium ${
+                page <= 1 ? "pointer-events-none bg-beige/60 text-ink/30" : "bg-white hover:bg-beige/60"
+              }`}
+            >
+              Previous
+            </Link>
+            <Link
+              href={pageHref(page + 1)}
+              aria-disabled={page >= totalPages}
+              className={`rounded-full px-4 py-2 text-xs font-medium ${
+                page >= totalPages ? "pointer-events-none bg-beige/60 text-ink/30" : "bg-white hover:bg-beige/60"
+              }`}
+            >
+              Next
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Stock history log */}
       <div className="bg-white rounded-xl2 shadow-soft p-6">

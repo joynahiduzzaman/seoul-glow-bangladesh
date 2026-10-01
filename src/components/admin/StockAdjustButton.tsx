@@ -5,12 +5,23 @@ import { useRouter } from "next/navigation";
 import { Plus, Minus, X } from "lucide-react";
 import toast from "react-hot-toast";
 
-export default function StockAdjustButton({ productId, productName }: { productId: string; productName: string }) {
+export default function StockAdjustButton({
+  productId,
+  productName,
+  canRecordCost = false,
+}: {
+  productId: string;
+  productName: string;
+  /** ADMIN/MANAGER only — the expenses API refuses STAFF, so the field is not
+   *  offered to someone whose submission would be rejected. */
+  canRecordCost?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [amount, setAmount] = useState("1");
   const [reason, setReason] = useState("");
+  const [cost, setCost] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -24,14 +35,23 @@ export default function StockAdjustButton({ productId, productName }: { productI
       const res = await fetch("/api/admin/inventory/adjust", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, change: qty * direction, reason: reason.trim() }),
+        body: JSON.stringify({
+          productId,
+          change: qty * direction,
+          reason: reason.trim(),
+          // Only sent when adding stock and the field was filled in.
+          purchaseCost: direction === 1 && cost.trim() ? Number(cost) : null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success(`Stock updated to ${data.stock}`);
+      if (data.warning) toast.error(data.warning);
+      else if (data.expenseRecorded) toast.success(`Stock updated to ${data.stock}, cost recorded`);
+      else toast.success(`Stock updated to ${data.stock}`);
       setOpen(false);
       setAmount("1");
       setReason("");
+      setCost("");
       router.refresh();
     } catch (err: any) {
       toast.error(err.message || "Failed to adjust stock");
@@ -88,6 +108,36 @@ export default function StockAdjustButton({ productId, productName }: { productI
               placeholder="Reason (e.g. Restocked from supplier, Damaged units)"
               className="w-full rounded-lg border border-ink/10 px-4 py-2.5 text-sm mb-4"
             />
+
+            {/* Buying stock and writing down what it cost were two separate
+                screens, so the second step was easy to skip — and a skipped
+                purchase is money missing from the books. Asking here, at the
+                moment the stock arrives, is the only time the number is to hand. */}
+            {canRecordCost && direction === 1 && (
+              <div className="mb-4">
+                <label htmlFor="restock-cost" className="mb-1.5 block text-xs font-medium text-ink/70">
+                  What did this stock cost? <span className="font-normal text-ink/40">(optional)</span>
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-ink/40">৳</span>
+                  <input
+                    id="restock-cost"
+                    type="number"
+                    min={1}
+                    step="any"
+                    inputMode="decimal"
+                    value={cost}
+                    onChange={(e) => setCost(e.target.value)}
+                    placeholder="0"
+                    className="w-full rounded-lg border border-ink/10 py-2.5 pl-7 pr-4 text-sm tabular-nums"
+                  />
+                </div>
+                <p className="mt-1.5 text-xs leading-relaxed text-ink/55">
+                  Saved as a Stock purchase on the Expenses page. It won&apos;t reduce your profit — each
+                  item&apos;s cost already counts as it sells.
+                </p>
+              </div>
+            )}
 
             <button disabled={loading} className="btn-primary w-full">{loading ? "Saving…" : "Save Adjustment"}</button>
           </form>

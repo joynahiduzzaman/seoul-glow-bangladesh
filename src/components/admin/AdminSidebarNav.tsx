@@ -16,6 +16,8 @@ import {
   BarChart3,
   Sparkles,
   Receipt,
+  ShieldCheck,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,6 +28,8 @@ const ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
   reports: BarChart3,
   expenses: Receipt,
+  staff: ShieldCheck,
+  customers: Users,
   products: Package,
   orders: ShoppingCart,
   coupons: Tag,

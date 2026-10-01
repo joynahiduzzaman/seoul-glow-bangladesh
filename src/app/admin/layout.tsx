@@ -24,11 +24,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "Brands", href: "/admin/brands", icon: "brands" as const },
     { label: "Inventory", href: "/admin/inventory", icon: "inventory" as const, badge: lowStockCount > 0 ? lowStockCount : undefined },
     { label: "Orders", href: "/admin/orders", icon: "orders" as const, badge: pendingOrders > 0 ? pendingOrders : undefined },
+    { label: "Customers", href: "/admin/customers", icon: "customers" as const },
     { label: "Reports", href: "/admin/reports", icon: "reports" as const },
     { label: "Expenses", href: "/admin/expenses", icon: "expenses" as const },
     { label: "Coupons", href: "/admin/coupons", icon: "coupons" as const },
     { label: "Affiliates", href: "/admin/affiliates", icon: "affiliates" as const },
     { label: "Support Tickets", href: "/admin/support-tickets", icon: "support" as const, badge: openTickets > 0 ? openTickets : undefined },
+    // Admins only. The page and its API both refuse a manager independently of
+    // this, so hiding the link is for tidiness rather than security — a manager
+    // has no reason to see a door they cannot open.
+    ...(user?.role === "ADMIN"
+      ? [{ label: "Staff", href: "/admin/staff", icon: "staff" as const }]
+      : []),
   ];
 
   return (

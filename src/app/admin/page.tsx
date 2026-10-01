@@ -97,20 +97,20 @@ export default async function AdminDashboard({
   // Revenue, the chart and best sellers all read the same rule from
   // server/revenue.ts, so a cancelled order cannot count in one place and not
   // another. See REVENUE_STATUSES in lib/order-status.ts for what qualifies.
-  const revenue = await getRevenueSummary(monthStart);
-  const totalRevenue = revenue.total;
-  const monthlyRevenue = revenue.monthly;
-
-  const chartData = await getDailyRevenue(sevenDaysAgo, 7);
-
-  const bestSellers = await getBestSellers(5);
-
-  // Profit for the selected period, plus the month-on-month comparison that
-  // turns a bare number into a direction of travel.
-  const [profit, momentum] = await Promise.all([
+  //
+  // One Promise.all, not five awaits in a row: none of these depends on another,
+  // and this page is force-dynamic, so every sequential await was a further
+  // round trip to Neon before anything could render. `profit` is the
+  // month-on-month comparison's period twin.
+  const [revenue, chartData, bestSellers, profit, momentum] = await Promise.all([
+    getRevenueSummary(monthStart),
+    getDailyRevenue(sevenDaysAgo, 7),
+    getBestSellers(5),
     getProfitSummary(period.from, period.to),
     getMonthOverMonth(now),
   ]);
+  const totalRevenue = revenue.total;
+  const monthlyRevenue = revenue.monthly;
 
   const QUICK_ACTIONS = [
     { label: "Add Product", href: "/admin/products/new", icon: Plus },
@@ -304,9 +304,14 @@ export default async function AdminDashboard({
           {recentOrders.length === 0 ? (
             <EmptyState message="No orders yet — they'll show up here as customers check out." />
           ) : (
+            // ?highlight opens that order's drawer on arrival (OrdersTableClient
+            // reads it, then strips the param). This used to link at the bare order
+            // list, so clicking a specific order number dropped you on an unfiltered
+            // page with the order still to be found by hand. The drawer fetches by
+            // id, so it works whatever page the order is on.
             <div className="space-y-3">
               {recentOrders.map((o) => (
-                <Link key={o.id} href={`/admin/orders`} className="flex justify-between text-sm border-b border-ink/5 pb-3 hover:bg-beige/30 -mx-2 px-2 rounded transition-colors">
+                <Link key={o.id} href={`/admin/orders?highlight=${o.id}`} className="flex justify-between text-sm border-b border-ink/5 pb-3 hover:bg-beige/30 -mx-2 px-2 rounded transition-colors">
                   <div className="min-w-0">
                     <p className="font-medium">{o.orderNumber}</p>
                     <p className="text-ink/70 text-xs truncate">{o.user?.name || o.guestName || "Guest"} · {o.items.length} items</p>
